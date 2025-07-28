@@ -11,14 +11,25 @@ interface RecipesPageProps {
 */  
 
 interface RecipesPageProps {
+  /*
   searchParams?: {
-  title?: string | string[];
-  // 他のクエリパラメータがあればここに追加
+  //title?: string | string[]; // <= ビルドエラーになるパターン
+  title?: string | string[] | null; // <= これでも、ビルドエラーとなる
  };
+ */
+  // searchParamsの型をPromise<...>でラップ
+  searchParams?: Promise<{
+    title?: string | string[] | null;
+    // 他のクエリパラメータがあればここに追加
+  }>;
 }
 
 const RecipesPage = async ({ searchParams }: RecipesPageProps) => {
-  const searchTerm = Array.isArray(searchParams?.title) ? searchParams?.title[0] : searchParams?.title || '';
+  // ビルドエラーになるパターン
+  // const searchTerm = Array.isArray(searchParams?.title) ? searchParams?.title[0] : searchParams?.title || '';
+  // searchParamsがPromiseとして渡されるため、awaitで展開
+  const resolvedSearchParams = await searchParams;
+  const searchTerm = Array.isArray(resolvedSearchParams?.title) ? resolvedSearchParams?.title[0] : resolvedSearchParams?.title || '';
 
   let initialRecipes;
   let initialHasMore;

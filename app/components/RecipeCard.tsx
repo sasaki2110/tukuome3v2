@@ -32,9 +32,9 @@ const RecipeCard = ({ recipe }: RecipeCardProps) => {
         {/* タイトル */}
         <h3 className="font-bold text-md mb-2">{recipe.title}</h3>
 
-        {/* いいね数 */}
+        {/* つくれぽ数 */}
         <p className="text-sm text-gray-600 mb-3">
-          いいね数: {formatLikes(recipe.reposu_n)}
+          {formatLikes(recipe.reposu_n)}
         </p>
 
         {/* 操作アイコンエリア */}
