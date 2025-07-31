@@ -3,7 +3,7 @@
 import { useState, useOptimistic, useTransition } from "react";
 import RecipeCard from "./RecipeCard";
 import { Repo } from "@/app/model/model";
-import { fetchRecipes, calculateNextOffset, ITEMS_PER_PAGE } from "@/lib/utils";
+import { fetchRecipes, calculateNextOffset, ITEMS_PER_PAGE } from "@/lib/myUtilities";
 import { toggleLikeAction } from "@/app/recipes/actions";
 
 interface RecipeListWithLoadMoreProps {

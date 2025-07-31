@@ -1,5 +1,7 @@
 import Image from 'next/image';
 import type { Repo } from '@/app/model/model';
+import { CommentDialog } from './CommentDialog'; // CommentDialogをインポート
+import { useState } from 'react'; // useStateをインポート
 
 type RecipeCardProps = {
   recipe: Repo;
@@ -8,9 +10,24 @@ type RecipeCardProps = {
 };
 
 const RecipeCard = ({ recipe, onLikeClick, isLiking }: RecipeCardProps) => {
+  const [showCommentDialog, setShowCommentDialog] = useState(false); // コメントダイアログの表示状態
+
   // いいね数をカンマ区切りにする関数
   const formatLikes = (num: number) => {
     return num.toLocaleString('ja-JP') + ' 件';
+  };
+
+  const handleOpenCommentDialog = () => {
+    setShowCommentDialog(true);
+  };
+
+  const handleCloseCommentDialog = () => {
+    setShowCommentDialog(false);
+  };
+
+  const handleSubmitComment = (comment: string) => {
+    console.log('Submitted comment:', comment); // 仮の処理
+    setShowCommentDialog(false);
   };
 
   return (
@@ -53,9 +70,20 @@ const RecipeCard = ({ recipe, onLikeClick, isLiking }: RecipeCardProps) => {
         {/* フォルダ（星） */}
         <span>{'⭐'}</span>
 
-        {/* コメント */}
-        <span>{recipe.comment ? '💬' : '🗨️'}</span>
+        {/* コメントボタン */}
+        <button onClick={handleOpenCommentDialog} className="cursor-pointer">
+          <span>{recipe.comment ? '💬' : '🗨️'}</span>
+        </button>
       </div>
+
+      {/* CommentDialogをレンダリング */}
+      <CommentDialog
+        isOpen={showCommentDialog}
+        recipeName={recipe.title}
+        currentComment={recipe.comment || ''} // 既存のコメントがあれば表示
+        onClose={handleCloseCommentDialog}
+        onSubmit={handleSubmitComment}
+      />
     </div>
   );
 };

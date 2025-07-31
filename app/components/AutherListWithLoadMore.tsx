@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react';
 import AutherCard from './AutherCard';
 import { Auther } from '@/app/model/model';
 import { fetchAuthers } from '@/lib/services';
-import { calculateNextOffset, ITEMS_PER_PAGE } from '@/lib/utils';
+import { calculateNextOffset, ITEMS_PER_PAGE } from '@/lib/myUtilities';
 
 interface AutherListWithLoadMoreProps {
   initialAuthers: Auther[];

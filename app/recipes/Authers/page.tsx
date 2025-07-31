@@ -1,6 +1,6 @@
 import { fetchAuthers } from "@/lib/services";
 import { AutherListWithLoadMore } from "@/app/components/AutherListWithLoadMore";
-import { ITEMS_PER_PAGE } from "@/lib/utils";
+import { ITEMS_PER_PAGE } from "@/lib/myUtilities";
 
 const AuthersPage = async () => {
   const { authers: initialAuthers, hasMore: initialHasMore } = await fetchAuthers(

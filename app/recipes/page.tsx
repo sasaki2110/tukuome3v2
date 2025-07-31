@@ -1,6 +1,6 @@
 import { getRecipes, getRecipesByTitle } from "@/lib/services";
 import { RecipeListWithLoadMore } from "../components/RecipeListWithLoadMore";
-import { ITEMS_PER_PAGE } from "@/lib/utils";
+import { ITEMS_PER_PAGE } from "@/lib/myUtilities";
 import SearchInput from "../components/SearchInput";
 
 import { searchRecipes } from "./actions";
