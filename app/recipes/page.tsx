@@ -21,7 +21,7 @@ interface RecipesPageProps {
 const RecipesPage = async ({ searchParams }: RecipesPageProps) => {
   // searchParamsがPromiseであることを考慮して、awaitで解決 NODE 15からの仕様に合わせて
   const resolvedSearchParams = await searchParams;
-  let searchTerm = Array.isArray(resolvedSearchParams?.title) ? resolvedSearchParams?.title[0] : resolvedSearchParams?.title || '';
+  const searchTerm = Array.isArray(resolvedSearchParams?.title) ? resolvedSearchParams?.title[0] : resolvedSearchParams?.title || '';
 
   let initialRecipes;
   let initialHasMore;
