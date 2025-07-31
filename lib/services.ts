@@ -1,6 +1,6 @@
 'use server';
 
-import { getRepos, getReposByTitle } from './db';
+import { getRepos, getReposByTitle, updateLikeStatus } from './db';
 import { Repo } from '@/app/model/model';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -42,4 +42,18 @@ export async function getRecipesByTitle(searchTerm: string, offset: number, limi
 
   const { repos, hasMore } = await getReposByTitle(userId, searchTerm, limit, offset);
   return { recipes: repos, hasMore };
+}
+
+/**
+ * レシピのいいね状態を更新します。
+ * @param recipeId レシピID
+ * @param newRank 新しいランクの値
+ */
+export async function setLike(recipeId: number, newRank: number): Promise<void> {
+  const userId = await getUserIdFromSession();
+
+  await updateLikeStatus(userId, recipeId, newRank);
+
+  // レシピ一覧ページのキャッシュをクリア
+  // revalidatePath('/recipes'); // Optimistic UIに任せるためコメントアウト
 }

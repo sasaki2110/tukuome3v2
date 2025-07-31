@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import RecipeCard from "./RecipeCard"; // Corrected import
+import { useState, useOptimistic, useTransition } from "react";
+import RecipeCard from "./RecipeCard";
 import { Repo } from "@/app/model/model";
-import { fetchRecipes, calculateNextOffset, ITEMS_PER_PAGE } from "@/lib/utils"; // New imports
+import { fetchRecipes, calculateNextOffset, ITEMS_PER_PAGE } from "@/lib/utils";
+import { toggleLikeAction } from "@/app/recipes/actions";
 
 interface RecipeListWithLoadMoreProps {
   initialRecipes: Repo[];
@@ -19,13 +20,43 @@ export function RecipeListWithLoadMore({
   searchTerm,
 }: RecipeListWithLoadMoreProps) {
   const [recipes, setRecipes] = useState<Repo[]>(initialRecipes);
+  const [isPending, startTransition] = useTransition();
+  const [likingRecipeId, setLikingRecipeId] = useState<number | null>(null);
+  const [optimisticRecipes, setOptimisticRecipes] = useOptimistic(
+    recipes,
+    (state, { recipeId, newRank }: { recipeId: number; newRank: number }) => {
+      return state.map((recipe) =>
+        recipe.id_n === recipeId ? { ...recipe, rank: newRank } : recipe
+      );
+    }
+  );
   const [offset, setOffset] = useState<number>(initialOffset);
   const [hasMore, setHasMore] = useState<boolean>(initialHasMore);
   const [loading, setLoading] = useState<boolean>(false);
 
+  const handleLikeClick = (recipe: Repo) => {
+    setLikingRecipeId(recipe.id_n);
+    startTransition(async () => {
+      const newRank = recipe.rank === 1 ? 0 : 1;
+
+      setOptimisticRecipes({
+        recipeId: recipe.id_n,
+        newRank: newRank,
+      });
+
+      await toggleLikeAction(recipe.id_n, newRank);
+
+      const newRecipes = recipes.map((r) =>
+        r.id_n === recipe.id_n ? { ...r, rank: newRank } : r
+      );
+      setRecipes(newRecipes);
+      setLikingRecipeId(null);
+    });
+  };
+
   const loadMoreRecipes = async () => {
     setLoading(true);
-    const nextOffset = calculateNextOffset(offset); // Use common utility
+    const nextOffset = calculateNextOffset(offset);
     const { recipes: newRecipes, hasMore: newHasMore } = await fetchRecipes(
       nextOffset,
       ITEMS_PER_PAGE,
@@ -40,8 +71,13 @@ export function RecipeListWithLoadMore({
   return (
     <div>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-        {recipes.map((recipe) => (
-          <RecipeCard key={recipe.id_n} recipe={recipe} />
+        {optimisticRecipes.map((recipe) => (
+          <RecipeCard
+            key={recipe.id_n}
+            recipe={recipe}
+            onLikeClick={() => handleLikeClick(recipe)}
+            isLiking={isPending && likingRecipeId === recipe.id_n}
+          />
         ))}
       </div>
       {hasMore && (

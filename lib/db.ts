@@ -43,3 +43,28 @@ export async function getReposByTitle(userId: string, searchTerm: string, limit:
 
   return { repos: rows, hasMore };
 }
+
+/**
+ * 指定されたレシピの現在のいいね状態（rank）を取得します。
+ * @param userId ユーザーID
+ * @param recipeId レシピID
+ * @returns 現在のrankの値（0または1）、レシピが見つからない場合はnull
+ */
+export async function getLikeStatus(userId: string, recipeId: number): Promise<number | null> {
+  const { rows } = await sql<{ rank: number }>`
+    SELECT rank FROM repo WHERE userid = ${userId} AND id_n = ${recipeId};
+  `;
+  return rows.length > 0 ? rows[0].rank : null;
+}
+
+/**
+ * 指定されたレシピのいいね状態（rank）を更新します。
+ * @param userId ユーザーID
+ * @param recipeId レシピID
+ * @param newStatus 新しいrankの値（0または1）
+ */
+export async function updateLikeStatus(userId: string, recipeId: number, newStatus: number): Promise<void> {
+  await sql`
+    UPDATE repo SET rank = ${newStatus} WHERE userid = ${userId} AND id_n = ${recipeId};
+  `;
+}
