@@ -35,7 +35,7 @@ export default function NavBar() {
               <ul className="flex flex-col md:flex-row justify-center md:justify-end items-end">
                 <Link href="/search/tag" className="block px-2 py-2 text-center">タグ検索</Link>
                 <Link href="#" className="block px-2 py-2 text-center">フォルダ</Link>
-                <Link href="#" className="block px-2 py-2 text-center">作者一覧</Link>
+                <Link href="/recipes/Authers" className="block px-2 py-2 text-center">作者一覧</Link>
                 <li>
                   <button onClick={() => signOut()} className="block px-2 py-2 text-center">ログアウト</button>
                 </li>
@@ -52,7 +52,7 @@ export default function NavBar() {
           <ul className="flex flex-col md:flex-row justify-center md:justify-end items-center">
             <Link href="/search/tag" onClick={()=> {setIsOpen(!isOpen)}} className="block px-2 py-2 text-center">タグ検索</Link>
             <Link href="#" onClick={()=> {setIsOpen(!isOpen)}} className="block px-2 py-2 text-center">フォルダ</Link>
-            <Link href="#" onClick={()=> {setIsOpen(!isOpen)}} className="block px-2 py-2 text-center">作者一覧</Link>
+            <Link href="/recipes/Authers" onClick={()=> {setIsOpen(!isOpen)}} className="block px-2 py-2 text-center">作者一覧</Link>
             <li>
               <button onClick={() => signOut()} className="block px-2 py-2 text-center">ログアウト</button>
             </li>

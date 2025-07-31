@@ -1,7 +1,7 @@
 'use server';
 
-import { getRepos, getReposByTitle, updateLikeStatus } from './db';
-import { Repo } from '@/app/model/model';
+import { getRepos, getReposByTitle, updateLikeStatus, getAuthers } from './db';
+import { Repo, Auther } from '@/app/model/model';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
@@ -56,4 +56,16 @@ export async function setLike(recipeId: number, newRank: number): Promise<void> 
 
   // レシピ一覧ページのキャッシュをクリア
   // revalidatePath('/recipes'); // Optimistic UIに任せるためコメントアウト
+}
+
+/**
+ * 作者一覧を取得します。
+ * @param offset スキップする件数
+ * @param limit 取得する件数
+ * @returns Auther型の配列と、まだ取得できるデータがあるかを示すhasMoreフラグ
+ */
+export async function fetchAuthers(offset: number, limit: number): Promise<{ authers: Auther[], hasMore: boolean }> {
+  const userId = await getUserIdFromSession();
+  const { authers, hasMore } = await getAuthers(userId, limit, offset);
+  return { authers, hasMore };
 }

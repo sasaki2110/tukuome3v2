@@ -79,3 +79,10 @@ export type DispTag = {
     /// 子タグなし：そのタグに含まれるレシピの件数　　このタグが選ばれると、そのタグでレシピを検索するように一覧画面へ戻る
     hasschildren: string,
 }
+
+// 作者型
+export type Auther = {
+  name: string,
+  recipesu: number,
+  image: string,
+}

@@ -1,5 +1,5 @@
 import { sql } from '@vercel/postgres';
-import { Repo } from '@/app/model/model'; // Repo型をインポート
+import { Repo, Auther } from '@/app/model/model'; // Repo, Auther型をインポート
 
 /**
  * 指定されたオフセットから指定された件数のレシピを取得します。
@@ -67,4 +67,32 @@ export async function updateLikeStatus(userId: string, recipeId: number, newStat
   await sql`
     UPDATE repo SET rank = ${newStatus} WHERE userid = ${userId} AND id_n = ${recipeId};
   `;
+}
+
+/**
+ * 指定されたユーザーIDの作者一覧を取得します。
+ * @param userId ユーザーID
+ * @param limit 取得する件数
+ * @param offset スキップする件数
+ * @returns Auther型の配列と、まだ取得できるデータがあるかを示すhasMoreフラグ
+ */
+export async function getAuthers(userId: string, limit: number, offset: number): Promise<{ authers: Auther[], hasMore: boolean }> {
+  const { rows: authers } = await sql<Auther>`
+    select bbb.auther as name, bbb.recipesu as recipesu, bbb.image as image
+    from (
+      SELECT
+        substring(substring(org.title from 'by .*'), 3, length(substring(org.title from 'by .*'))) as auther,
+        count(org.*) as recipesu,
+        max(org.image) as image
+      from repo org
+      where userid = ${userId}
+      group by auther
+    ) as bbb
+    order by recipesu desc, auther
+    limit ${limit} offset ${offset};
+  `;
+
+  const hasMore = authers.length === limit;
+
+  return { authers, hasMore };
 }
