@@ -31,9 +31,10 @@ export async function getRepos(userId: string, limit: number, offset: number): P
  * @returns Repo型の配列と、まだ取得できるレシピがあるかを示すhasMoreフラグ
  */
 export async function getReposByTitle(userId: string, searchTerm: string, limit: number, offset: number): Promise<{ repos: Repo[], hasMore: boolean }> {
+  const str = "%" + searchTerm + "%"
   const { rows } = await sql<Repo>`
     SELECT * FROM repo
-    WHERE userid = ${userId} AND title ILIKE ${'%' + searchTerm + '%'}
+    WHERE userid = ${userId} AND title LIKE ${str}
     ORDER BY reposu_n DESC, id_n DESC
     LIMIT ${limit} OFFSET ${offset};
   `;

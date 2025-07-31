@@ -11,13 +11,7 @@ interface RecipesPageProps {
 */  
 
 interface RecipesPageProps {
-  /*
-  searchParams?: {
-  //title?: string | string[]; // <= ビルドエラーになるパターン
-  title?: string | string[] | null; // <= これでも、ビルドエラーとなる
- };
- */
-  // searchParamsの型をPromise<...>でラップ
+  // searchParamsの型をPromise<...>でラップ NODE 15からの仕様に合わせて
   searchParams?: Promise<{
     title?: string | string[] | null;
     // 他のクエリパラメータがあればここに追加
@@ -25,11 +19,9 @@ interface RecipesPageProps {
 }
 
 const RecipesPage = async ({ searchParams }: RecipesPageProps) => {
-  // ビルドエラーになるパターン
-  // const searchTerm = Array.isArray(searchParams?.title) ? searchParams?.title[0] : searchParams?.title || '';
-  // searchParamsがPromiseとして渡されるため、awaitで展開
+  // searchParamsがPromiseであることを考慮して、awaitで解決 NODE 15からの仕様に合わせて
   const resolvedSearchParams = await searchParams;
-  const searchTerm = Array.isArray(resolvedSearchParams?.title) ? resolvedSearchParams?.title[0] : resolvedSearchParams?.title || '';
+  let searchTerm = Array.isArray(resolvedSearchParams?.title) ? resolvedSearchParams?.title[0] : resolvedSearchParams?.title || '';
 
   let initialRecipes;
   let initialHasMore;
@@ -52,6 +44,7 @@ const RecipesPage = async ({ searchParams }: RecipesPageProps) => {
       <SearchInput onSearch={searchRecipes} />
       <div className="container mx-auto p-4">
         <RecipeListWithLoadMore
+          key={searchTerm}
           initialRecipes={initialRecipes}
           initialOffset={0}
           initialHasMore={initialHasMore}
