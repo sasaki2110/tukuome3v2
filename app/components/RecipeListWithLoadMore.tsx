@@ -4,7 +4,7 @@ import { useState, useOptimistic, useTransition } from "react";
 import RecipeCard from "./RecipeCard";
 import { Repo } from "@/app/model/model";
 import { fetchRecipes, calculateNextOffset, ITEMS_PER_PAGE } from "@/lib/myUtilities";
-import { toggleLikeAction } from "@/app/recipes/actions";
+import { toggleLikeAction, addCommentAction } from "@/app/recipes/actions";
 
 interface RecipeListWithLoadMoreProps {
   initialRecipes: Repo[];
@@ -24,9 +24,11 @@ export function RecipeListWithLoadMore({
   const [likingRecipeId, setLikingRecipeId] = useState<number | null>(null);
   const [optimisticRecipes, setOptimisticRecipes] = useOptimistic(
     recipes,
-    (state, { recipeId, newRank }: { recipeId: number; newRank: number }) => {
+    (state, { recipeId, newRank, newComment }: { recipeId: number; newRank?: number; newComment?: string }) => {
       return state.map((recipe) =>
-        recipe.id_n === recipeId ? { ...recipe, rank: newRank } : recipe
+        recipe.id_n === recipeId
+          ? { ...recipe, ...(newRank !== undefined && { rank: newRank }), ...(newComment !== undefined && { comment: newComment }) }
+          : recipe
       );
     }
   );
@@ -54,6 +56,22 @@ export function RecipeListWithLoadMore({
     });
   };
 
+  const handleCommentSubmit = (recipeId: number, comment: string) => {
+    startTransition(async () => {
+      setOptimisticRecipes({
+        recipeId: recipeId,
+        newComment: comment,
+      });
+
+      await addCommentAction(recipeId, comment);
+
+      const newRecipes = recipes.map((r) =>
+        r.id_n === recipeId ? { ...r, comment: comment } : r
+      );
+      setRecipes(newRecipes);
+    });
+  };
+
   const loadMoreRecipes = async () => {
     setLoading(true);
     const nextOffset = calculateNextOffset(offset);
@@ -77,6 +95,7 @@ export function RecipeListWithLoadMore({
             recipe={recipe}
             onLikeClick={() => handleLikeClick(recipe)}
             isLiking={isPending && likingRecipeId === recipe.id_n}
+            onCommentSubmit={handleCommentSubmit}
           />
         ))}
       </div>

@@ -1,7 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { setLike } from '@/lib/services';
+import { setLike, addComment } from '@/lib/services';
 
 export const searchRecipes = async (searchTerm: string) => {
   const params = new URLSearchParams();
@@ -13,4 +13,8 @@ export const searchRecipes = async (searchTerm: string) => {
 
 export const toggleLikeAction = async (recipeId: number, newRank: number) => {
   await setLike(recipeId, newRank);
+};
+
+export const addCommentAction = async (recipeId: number, comment: string) => {
+  await addComment(recipeId, comment);
 };

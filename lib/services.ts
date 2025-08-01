@@ -1,6 +1,6 @@
 'use server';
 
-import { getRepos, getReposByTitle, updateLikeStatus, getAuthers } from './db';
+import { getRepos, getReposByTitle, updateLikeStatus, updateComment, getAuthers } from './db';
 import { Repo, Auther } from '@/app/model/model';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -56,6 +56,12 @@ export async function setLike(recipeId: number, newRank: number): Promise<void> 
 
   // レシピ一覧ページのキャッシュをクリア
   // revalidatePath('/recipes'); // Optimistic UIに任せるためコメントアウト
+}
+
+export async function addComment(recipeId: number, comment: string): Promise<void> {
+  const userId = await getUserIdFromSession();
+
+  await updateComment(userId, recipeId, comment);
 }
 
 /**

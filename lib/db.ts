@@ -69,6 +69,12 @@ export async function updateLikeStatus(userId: string, recipeId: number, newStat
   `;
 }
 
+export async function updateComment(userId: string, recipeId: number, comment: string): Promise<void> {
+  await sql`
+    UPDATE repo SET comment = ${comment} WHERE userid = ${userId} AND id_n = ${recipeId};
+  `;
+}
+
 /**
  * 指定されたユーザーIDの作者一覧を取得します。
  * @param userId ユーザーID

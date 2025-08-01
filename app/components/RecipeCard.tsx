@@ -7,9 +7,10 @@ type RecipeCardProps = {
   recipe: Repo;
   onLikeClick: () => void; // 親にクリックを通知する関数
   isLiking: boolean;
+  onCommentSubmit: (recipeId: number, comment: string) => void; // コメント投稿を親に通知する関数
 };
 
-const RecipeCard = ({ recipe, onLikeClick, isLiking }: RecipeCardProps) => {
+const RecipeCard = ({ recipe, onLikeClick, isLiking, onCommentSubmit }: RecipeCardProps) => {
   const [showCommentDialog, setShowCommentDialog] = useState(false); // コメントダイアログの表示状態
 
   // いいね数をカンマ区切りにする関数
@@ -26,7 +27,7 @@ const RecipeCard = ({ recipe, onLikeClick, isLiking }: RecipeCardProps) => {
   };
 
   const handleSubmitComment = (comment: string) => {
-    console.log('Submitted comment:', comment); // 仮の処理
+    onCommentSubmit(recipe.id_n, comment);
     setShowCommentDialog(false);
   };
 
@@ -71,7 +72,7 @@ const RecipeCard = ({ recipe, onLikeClick, isLiking }: RecipeCardProps) => {
         <span>{'⭐'}</span>
 
         {/* コメントボタン */}
-        <button onClick={handleOpenCommentDialog} className="cursor-pointer">
+        <button onClick={handleOpenCommentDialog} className={`cursor-pointer ${recipe.comment ? 'text-blue-500' : ''}`}>
           <span>{recipe.comment ? '💬' : '🗨️'}</span>
         </button>
       </div>

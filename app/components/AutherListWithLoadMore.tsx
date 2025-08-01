@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState } from 'react';
 import AutherCard from './AutherCard';
 import { Auther } from '@/app/model/model';
 import { fetchAuthers } from '@/lib/services';
