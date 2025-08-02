@@ -1,5 +1,5 @@
 import { sql } from '@vercel/postgres';
-import { Repo, Auther, Tag } from '@/app/model/model'; // Repo, Auther型をインポート
+import { Repo, Auther, DispTag } from '@/app/model/model';
 
 function getModeWhereClause(mode: string): string {
   switch (mode) {
@@ -143,69 +143,65 @@ export async function getAuthers(userId: string, limit: number, offset: number):
   return { authers, hasMore };
 }
 
+
+
 /**
- * 指定されたタグに紐づく最もつくれぽ数の多いレシピの画像URIを取得します。
+ * 指定されたレベルと親タグのnameに基づいて表示用タグを最適化されたクエリで取得します。
  * @param userId ユーザーID
- * @param tagName タグのname
- * @returns 画像URI、またはnull
- */
-export async function getTopRecipeImageByTag(userId: string, tagName: string): Promise<string | null> {
-  const { rows } = await sql<{ image: string }>`
-    SELECT image FROM repo
-    WHERE userid = ${userId} AND tag LIKE ${'%' + tagName + '%'}
-    ORDER BY reposu_n DESC, id_n DESC
-    LIMIT 1;
-  `;
-  return rows.length > 0 ? rows[0].image : null;
-}
-
-/**
- * 指定されたタグの子タグの件数と、そのタグに紐づくレシピの件数を取得します。
- * @param userId ユーザーID
- * @param currentTagLevel 現在のタグのレベル
- * @param currentTagName 現在のタグのname
- * @returns 子タグの件数とレシピの件数を含むオブジェクト
- */
-export async function getTagInfoForDisplay(
-  userId: string,
-  currentTagLevel: number,
-  currentTagName: string
-): Promise<{ childTagCount: number; recipeCount: number }> {
-  const nextLevel = currentTagLevel + 1;
-
-  // 子タグの件数を取得
-  const { rows: childTagRows } = await sql<{ count: string }>`
-    SELECT COUNT(*) FROM tag WHERE level = ${nextLevel} AND name LIKE ${currentTagName + '%'};
-  `;
-  const childTagCount = parseInt(childTagRows[0].count, 10);
-
-  // レシピの件数を取得
-  const { rows: recipeRows } = await sql<{ count: string }>`
-    SELECT COUNT(*) FROM repo WHERE userid = ${userId} AND tag LIKE ${'%' + currentTagName + '%'};
-  `;
-  const recipeCount = parseInt(recipeRows[0].count, 10);
-
-  return { childTagCount, recipeCount };
-}
-
-/**
- * 指定されたレベルと親タグのnameに基づいてタグを取得します。
  * @param level 取得するタグのレベル
  * @param value 親タグのname (最上位の場合は空文字列)
- * @returns Tag型の配列
+ * @returns DispTag型の配列
  */
-export async function getTagsByLevelAndValue(level: number, value: string): Promise<Tag[]> {
+export async function getDispTagsOptimized(userId: string, level: number, value: string): Promise<DispTag[]> {
   let query: string;
   let params: (string | number)[];
 
+  // Base query for tags
+  query = `
+    SELECT
+        t.id,
+        t.dispname,
+        t.name,
+        (SELECT image FROM repo WHERE userid = $1 AND tag LIKE '%' || t.name || '%' ORDER BY reposu_n DESC, id_n DESC LIMIT 1) AS imageuri,
+        (SELECT COUNT(*) FROM tag WHERE level = t.level + 1 AND name LIKE t.name || '%') AS child_tag_count,
+        (SELECT COUNT(*) FROM repo WHERE userid = $1 AND tag LIKE '%' || t.name || '%') AS recipe_count
+    FROM
+        tag t
+    WHERE
+        t.level = $2
+  `;
+
   if (value === "") {
-    query = `SELECT * FROM tag WHERE level = $1 ORDER BY id;`;
-    params = [level];
+    query += ` ORDER BY t.id;`;
+    params = [userId, level];
   } else {
-    query = `SELECT * FROM tag WHERE level = $1 AND name LIKE $2 || '%' ORDER BY id;`;
-    params = [level, value];
+    query += ` AND t.name LIKE $3 || '%' ORDER BY t.id;`;
+    params = [userId, level, value];
   }
 
   const { rows } = await sql.query(query, params);
-  return rows as Tag[];
+
+  const dispTags: DispTag[] = rows.map(row => {
+    const childTagCount = parseInt(row.child_tag_count, 10);
+    const recipeCount = parseInt(row.recipe_count, 10);
+    const imageUri = row.imageuri;
+
+    let hassChildren: string;
+    if (childTagCount > 0) {
+      hassChildren = "▼";
+    } else {
+      hassChildren = `${recipeCount} 件`;
+    }
+
+    return {
+      id: row.id,
+      dispname: row.dispname,
+      name: row.name,
+      imageuri: imageUri || "",
+      hasimageuri: imageUri ? "1" : "0",
+      hasschildren: hassChildren,
+    };
+  });
+
+  return dispTags;
 }

@@ -1,6 +1,6 @@
 'use server';
 
-import { getRepos, getReposByTitle, getReposByTag, updateLikeStatus, updateComment, getAuthers, getTagsByLevelAndValue, getTopRecipeImageByTag, getTagInfoForDisplay } from './db';
+import { getRepos, getReposByTitle, getReposByTag, updateLikeStatus, updateComment, getAuthers, getDispTagsOptimized } from './db';
 import { Repo, Auther, DispTag } from '@/app/model/model';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -121,29 +121,5 @@ export async function fetchAuthers(offset: number, limit: number): Promise<{ aut
  */
 export async function getDispTags(level: number, value: string): Promise<DispTag[]> {
   const userId = await getUserIdFromSession();
-  const tags = await getTagsByLevelAndValue(level, value);
-  const dispTags: DispTag[] = [];
-
-  for (const tag of tags) {
-    const imageUri = await getTopRecipeImageByTag(userId, tag.name);
-    const { childTagCount, recipeCount } = await getTagInfoForDisplay(userId, tag.level, tag.name);
-
-    let hassChildren: string;
-    if (childTagCount > 0) {
-      hassChildren = "▼";
-    } else {
-      hassChildren = `${recipeCount} 件`;
-    }
-
-    dispTags.push({
-      id: tag.id,
-      dispname: tag.dispname,
-      name: tag.name,
-      imageuri: imageUri || "", // 画像がない場合は空文字列
-      hasimageuri: imageUri ? "1" : "0",
-      hasschildren: hassChildren,
-    });
-  }
-
-  return dispTags;
+  return await getDispTagsOptimized(userId, level, value);
 }

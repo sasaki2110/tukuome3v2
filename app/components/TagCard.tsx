@@ -11,7 +11,7 @@ export function TagCard({ tag, onClick }: TagCardProps) {
 
   return (
     <div
-      className="relative flex items-center justify-center w-full h-48 rounded-lg overflow-hidden shadow-lg cursor-pointer bg-white"
+      className="relative flex items-center justify-center w-full aspect-square rounded-lg overflow-hidden shadow-lg cursor-pointer bg-white"
       onClick={() => onClick(tag)}
     >
       {/* レイヤー1: 背景画像 */}
@@ -26,7 +26,7 @@ export function TagCard({ tag, onClick }: TagCardProps) {
       )}
 
       {/* レイヤー2: 半透明オーバーレイ (画像がある時のみ) */}
-      {hasImage && <div className="absolute inset-0 bg-black/40"></div>}
+      {hasImage && <div className="absolute inset-0 bg-black/30"></div>}
 
       {/* レイヤー3: テキストコンテンツ (常に最前面) */}
       <div className="relative z-10 text-center">

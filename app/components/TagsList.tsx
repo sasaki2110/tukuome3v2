@@ -14,6 +14,7 @@ export function TagsList({ initialTags }: TagsListProps) {
   const [tags, setTags] = useState<DispTag[]>(initialTags);
   const [currentLevel, setCurrentLevel] = useState(0);
   const [currentValue, setCurrentValue] = useState('');
+  const [isLoading, setIsLoading] = useState(false); // ローディング状態を追加
   const router = useRouter();
 
   useEffect(() => {
@@ -21,8 +22,10 @@ export function TagsList({ initialTags }: TagsListProps) {
     // will run when the user clicks a tag to drill down.
     if (currentLevel > 0) {
       async function fetchTags() {
+        setIsLoading(true); // フェッチ開始時にローディングをtrueに
         const newTags = await getDispTags(currentLevel, currentValue);
         setTags(newTags);
+        setIsLoading(false); // フェッチ完了時にローディングをfalseに
       }
       fetchTags();
     }
@@ -38,10 +41,14 @@ export function TagsList({ initialTags }: TagsListProps) {
   };
 
   return (
-    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4 p-4">
-      {tags.map((tag) => (
-        <TagCard key={tag.id} tag={tag} onClick={handleTagClick} />
-      ))}
+    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 p-2">
+      {isLoading ? (
+        <div className="col-span-full text-center py-8">読み込み中...</div> // ローディング表示
+      ) : (
+        tags.map((tag) => (
+          <TagCard key={tag.id} tag={tag} onClick={handleTagClick} />
+        ))
+      )}
     </div>
   );
 }
