@@ -3,7 +3,8 @@
 import { useState, useOptimistic, useTransition } from "react";
 import RecipeCard from "./RecipeCard";
 import { Repo } from "@/app/model/model";
-import { fetchRecipes, calculateNextOffset, ITEMS_PER_PAGE } from "@/lib/myUtilities";
+import { getFilteredRecipes } from "@/lib/services";
+import { calculateNextOffset, ITEMS_PER_PAGE } from "@/lib/constants";
 import { toggleLikeAction, addCommentAction } from "@/app/recipes/actions";
 
 interface RecipeListWithLoadMoreProps {
@@ -77,7 +78,7 @@ export function RecipeListWithLoadMore({
   const loadMoreRecipes = async () => {
     setLoading(true);
     const nextOffset = calculateNextOffset(offset);
-    const { recipes: newRecipes, hasMore: newHasMore } = await fetchRecipes(
+    const { recipes: newRecipes, hasMore: newHasMore } = await getFilteredRecipes(
       nextOffset,
       ITEMS_PER_PAGE,
       searchTerm,

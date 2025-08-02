@@ -17,6 +17,8 @@ async function getUserIdFromSession(): Promise<string> {
   return session.user.name;
 }
 
+
+
 /**
  * 指定されたオフセットから指定された件数のレシピを取得します。
  * @param offset スキップするレシピの件数
@@ -43,6 +45,22 @@ export async function getRecipesByTitle(searchTerm: string, offset: number, limi
   const { repos, hasMore } = await getReposByTitle(userId, searchTerm, limit, offset, mode);
   return { recipes: repos, hasMore };
 }
+
+export async function getFilteredRecipes(
+  offset: number,
+  limit: number,
+  searchTerm?: string,
+  searchMode?: string
+): Promise<{ recipes: Repo[]; hasMore: boolean }> {
+  const mode = searchMode || 'all';
+  if (searchTerm) {
+    return await getRecipesByTitle(searchTerm, offset, limit, mode);
+  } else {
+    return await getRecipes(offset, limit, mode);
+  }
+}
+
+
 
 /**
  * レシピのいいね状態を更新します。

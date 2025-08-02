@@ -2,7 +2,7 @@
 
 import { useSearchParams, usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { searchModes } from '@/lib/myUtilities'
+import { searchModes } from '@/lib/constants'
 
 interface SearchModeMenuProps {
   onLinkClick?: () => void;
