@@ -3,10 +3,13 @@
 import { redirect } from 'next/navigation';
 import { setLike, addComment } from '@/lib/services';
 
-export const searchRecipes = async (searchTerm: string) => {
+export const searchRecipes = async (searchTerm: string, mode: string | null) => {
   const params = new URLSearchParams();
   if (searchTerm) {
     params.set('title', searchTerm);
+  }
+  if (mode) {
+    params.set('mode', mode);
   }
   redirect(`/recipes?${params.toString()}`);
 };

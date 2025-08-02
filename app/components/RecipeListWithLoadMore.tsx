@@ -11,6 +11,7 @@ interface RecipeListWithLoadMoreProps {
   initialOffset: number;
   initialHasMore: boolean;
   searchTerm?: string;
+  searchMode?: string;
 }
 
 export function RecipeListWithLoadMore({
@@ -18,6 +19,7 @@ export function RecipeListWithLoadMore({
   initialOffset,
   initialHasMore,
   searchTerm,
+  searchMode,
 }: RecipeListWithLoadMoreProps) {
   const [recipes, setRecipes] = useState<Repo[]>(initialRecipes);
   const [isPending, startTransition] = useTransition();
@@ -78,7 +80,8 @@ export function RecipeListWithLoadMore({
     const { recipes: newRecipes, hasMore: newHasMore } = await fetchRecipes(
       nextOffset,
       ITEMS_PER_PAGE,
-      searchTerm
+      searchTerm,
+      searchMode
     );
     setRecipes((prevRecipes) => [...prevRecipes, ...newRecipes]);
     setOffset(nextOffset);

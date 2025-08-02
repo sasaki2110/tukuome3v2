@@ -1,17 +1,20 @@
 'use client';
 
 import { useState, KeyboardEvent } from 'react';
+import { useSearchParams } from 'next/navigation';
 
 type SearchInputProps = {
-  onSearch: (searchTerm: string) => void;
+  onSearch: (searchTerm: string, mode: string | null) => void;
 };
 
 const SearchInput = ({ onSearch }: SearchInputProps) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const searchParams = useSearchParams();
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
-      onSearch(searchTerm);
+      const mode = searchParams.get('mode');
+      onSearch(searchTerm, mode);
     }
   };
 

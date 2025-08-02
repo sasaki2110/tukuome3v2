@@ -11,17 +11,16 @@ interface RecipesPageProps {
 */  
 
 interface RecipesPageProps {
-  // searchParamsの型をPromise<...>でラップ NODE 15からの仕様に合わせて
   searchParams?: Promise<{
     title?: string | string[] | null;
-    // 他のクエリパラメータがあればここに追加
+    mode?: string | string[] | null;
   }>;
 }
 
 const RecipesPage = async ({ searchParams }: RecipesPageProps) => {
-  // searchParamsがPromiseであることを考慮して、awaitで解決 NODE 15からの仕様に合わせて
   const resolvedSearchParams = await searchParams;
   const searchTerm = Array.isArray(resolvedSearchParams?.title) ? resolvedSearchParams?.title[0] : resolvedSearchParams?.title || '';
+  const searchMode = Array.isArray(resolvedSearchParams?.mode) ? resolvedSearchParams?.mode[0] : resolvedSearchParams?.mode || 'all';
 
   let initialRecipes;
   let initialHasMore;
@@ -30,12 +29,14 @@ const RecipesPage = async ({ searchParams }: RecipesPageProps) => {
     ({ recipes: initialRecipes, hasMore: initialHasMore } = await getRecipesByTitle(
       searchTerm,
       0,
-      ITEMS_PER_PAGE
+      ITEMS_PER_PAGE,
+      searchMode
     ));
   } else {
     ({ recipes: initialRecipes, hasMore: initialHasMore } = await getRecipes(
       0,
-      ITEMS_PER_PAGE
+      ITEMS_PER_PAGE,
+      searchMode
     ));
   }
 
@@ -44,11 +45,12 @@ const RecipesPage = async ({ searchParams }: RecipesPageProps) => {
       <SearchInput onSearch={searchRecipes} />
       <div className="container mx-auto p-4">
         <RecipeListWithLoadMore
-          key={searchTerm}
+          key={`${searchTerm}-${searchMode}`}
           initialRecipes={initialRecipes}
           initialOffset={0}
           initialHasMore={initialHasMore}
           searchTerm={searchTerm}
+          searchMode={searchMode}
         />
       </div>
     </>

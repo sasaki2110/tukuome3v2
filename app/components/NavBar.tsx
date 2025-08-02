@@ -8,6 +8,7 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////
 "use client";
 import React, { useState } from 'react';
+import SearchModeMenu from './SearchModeMenu';
 import Link from "next/link"
 import Image from "next/image"
 import { useSession, signOut } from 'next-auth/react';
@@ -33,6 +34,7 @@ export default function NavBar() {
           <div className="flex items-center">
             <div className="hidden md:block ">
               <ul className="flex flex-col md:flex-row justify-center md:justify-end items-end">
+                <SearchModeMenu />
                 <Link href="/search/tag" className="block px-2 py-2 text-center">タグ検索</Link>
                 <Link href="#" className="block px-2 py-2 text-center">フォルダ</Link>
                 <Link href="/recipes/Authers" className="block px-2 py-2 text-center">作者一覧</Link>
@@ -56,6 +58,7 @@ export default function NavBar() {
             <li>
               <button onClick={() => signOut()} className="block px-2 py-2 text-center">ログアウト</button>
             </li>
+            <SearchModeMenu onLinkClick={() => setIsOpen(false)} />
           </ul>
         </div>
       </div>

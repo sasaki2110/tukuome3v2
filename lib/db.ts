@@ -1,25 +1,38 @@
 import { sql } from '@vercel/postgres';
 import { Repo, Auther } from '@/app/model/model'; // Repo, Auther型をインポート
 
+function getModeWhereClause(mode: string): string {
+  switch (mode) {
+    case 'main_dish':
+      return 'AND isMain = 1';
+    case 'sub_dish':
+      return 'AND isSub = 1';
+    case 'others':
+      return 'AND (isMain = 0 AND isSub = 0)';
+    default:
+      return '';
+  }
+}
+
 /**
  * 指定されたオフセットから指定された件数のレシピを取得します。
  * @param limit 取得するレシピの最大件数
  * @param offset スキップするレシピの件数
  * @returns Repo型の配列と、まだ取得できるレシピがあるかを示すhasMoreフラグ
  */
-export async function getRepos(userId: string, limit: number, offset: number): Promise<{ repos: Repo[], hasMore: boolean }> {
-  // reposu_n (つくれぽ数) の降順でソートし、LIMITとOFFSETを適用
-  const { rows } = await sql<Repo>`
+export async function getRepos(userId: string, limit: number, offset: number, mode: string): Promise<{ repos: Repo[], hasMore: boolean }> {
+  const modeWhereClause = getModeWhereClause(mode);
+  const query = `
     SELECT * FROM repo
-    WHERE userid = ${userId}
+    WHERE userid = $1 ${modeWhereClause}
     ORDER BY reposu_n DESC, id_n DESC
-    LIMIT ${limit} OFFSET ${offset};
+    LIMIT $2 OFFSET $3;
   `;
+  const { rows } = await sql.query(query, [userId, limit, offset]);
 
-  // 取得した行数がリミットと同じであれば、まだデータがある可能性がある
   const hasMore = rows.length === limit;
 
-  return { repos: rows, hasMore };
+  return { repos: rows as Repo[], hasMore };
 }
 
 /**
@@ -30,18 +43,20 @@ export async function getRepos(userId: string, limit: number, offset: number): P
  * @param offset スキップするレシピの件数
  * @returns Repo型の配列と、まだ取得できるレシピがあるかを示すhasMoreフラグ
  */
-export async function getReposByTitle(userId: string, searchTerm: string, limit: number, offset: number): Promise<{ repos: Repo[], hasMore: boolean }> {
-  const str = "%" + searchTerm + "%"
-  const { rows } = await sql<Repo>`
+export async function getReposByTitle(userId: string, searchTerm: string, limit: number, offset: number, mode: string): Promise<{ repos: Repo[], hasMore: boolean }> {
+  const str = "%" + searchTerm + "%";
+  const modeWhereClause = getModeWhereClause(mode);
+  const query = `
     SELECT * FROM repo
-    WHERE userid = ${userId} AND title LIKE ${str}
+    WHERE userid = $1 AND title LIKE $2 ${modeWhereClause}
     ORDER BY reposu_n DESC, id_n DESC
-    LIMIT ${limit} OFFSET ${offset};
+    LIMIT $3 OFFSET $4;
   `;
+  const { rows } = await sql.query(query, [userId, str, limit, offset]);
 
   const hasMore = rows.length === limit;
 
-  return { repos: rows, hasMore };
+  return { repos: rows as Repo[], hasMore };
 }
 
 /**
