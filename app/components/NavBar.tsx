@@ -23,7 +23,7 @@ export default function NavBar() {
   const { data: session } = useSession();
   
   return (
-      <div className="fixed inset-x-0 w-screen z-10 px-4 md:px-10 text-gray-800 bg-white">
+      <div className="fixed inset-x-0 w-screen z-50 px-4 md:px-10 text-gray-800 bg-white">
         <div className="flex justify-between items-center">
           <div className="flex items-center">
             <Link className="" href="/">
