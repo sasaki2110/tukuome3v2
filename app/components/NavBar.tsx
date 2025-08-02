@@ -52,13 +52,13 @@ export default function NavBar() {
         </div>
         <div className={isOpen?"block":"hidden"}>
           <ul className="flex flex-col md:flex-row justify-center md:justify-end items-center">
+            <SearchModeMenu onLinkClick={() => setIsOpen(false)} />
             <Link href="/search/tag" onClick={()=> {setIsOpen(!isOpen)}} className="block px-2 py-2 text-center">タグ検索</Link>
             <Link href="#" onClick={()=> {setIsOpen(!isOpen)}} className="block px-2 py-2 text-center">フォルダ</Link>
             <Link href="/recipes/Authers" onClick={()=> {setIsOpen(!isOpen)}} className="block px-2 py-2 text-center">作者一覧</Link>
             <li>
               <button onClick={() => signOut()} className="block px-2 py-2 text-center">ログアウト</button>
             </li>
-            <SearchModeMenu onLinkClick={() => setIsOpen(false)} />
           </ul>
         </div>
       </div>
