@@ -1,6 +1,6 @@
 'use server';
 
-import { getRepos, getReposByTitle, getReposByTag, updateLikeStatus, updateComment, getAuthers, getDispTagsOptimized } from './db';
+import { getRepos, getReposByTitle, getReposByTag, updateLikeStatus, updateComment, getAuthers, getDispTagsOptimized, getReposByFolder } from './db';
 import { Repo, Auther, DispTag } from '@/app/model/model';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -61,16 +61,34 @@ export async function getRecipesByTag(tagName: string, offset: number, limit: nu
   return { recipes: repos, hasMore };
 }
 
+/**
+ * 指定されたフォルダーに含まれるレシピを取得します。
+ * @param folderName フォルダー名
+ * @param offset スキップするレシピの件数
+ * @param limit 取得するレシピの最大件数
+ * @param mode 絞り込みモード
+ * @returns Repo型の配列と、まだ取得できるレシピがあるかを示すhasMoreフラグ
+ */
+export async function getRecipesByFolder(folderName: string, offset: number, limit: number, mode: string): Promise<{ recipes: Repo[], hasMore: boolean }> {
+  const userId = await getUserIdFromSession();
+
+  const { repos, hasMore } = await getReposByFolder(userId, folderName, limit, offset, mode);
+  return { recipes: repos, hasMore };
+}
+
 export async function getFilteredRecipes(
   offset: number,
   limit: number,
   searchTerm?: string,
   searchMode?: string,
-  searchTag?: string
+  searchTag?: string,
+  folderName?: string
 ): Promise<{ recipes: Repo[]; hasMore: boolean }> {
   const mode = searchMode || 'all';
 
-  if (searchTag) {
+  if (folderName) {
+    return await getRecipesByFolder(folderName, offset, limit, mode);
+  } else if (searchTag) {
     return await getRecipesByTag(searchTag, offset, limit, mode);
   } else if (searchTerm) {
     return await getRecipesByTitle(searchTerm, offset, limit, mode);
@@ -122,4 +140,44 @@ export async function fetchAuthers(offset: number, limit: number): Promise<{ aut
 export async function getDispTags(level: number, value: string): Promise<DispTag[]> {
   const userId = await getUserIdFromSession();
   return await getDispTagsOptimized(userId, level, value);
+}
+
+// フォルダー関連のサーバーアクション
+
+import { getFolders, addFolder, deleteFolder, addRecipeToFolder, removeRecipeFromFolder, isRecipeInFolder, getFoldersWithImages } from './db';
+import { Folder } from '@/app/model/model';
+
+export async function fetchFolders(): Promise<Folder[]> {
+  const userId = await getUserIdFromSession();
+  return await getFolders(userId);
+}
+
+export async function fetchFoldersWithImages(): Promise<(Folder & { images: string[] })[]> {
+  const userId = await getUserIdFromSession();
+  return await getFoldersWithImages(userId);
+}
+
+export async function createFolder(folderName: string): Promise<void> {
+  const userId = await getUserIdFromSession();
+  await addFolder(userId, folderName);
+}
+
+export async function removeFolder(folderName: string): Promise<void> {
+  const userId = await getUserIdFromSession();
+  await deleteFolder(userId, folderName);
+}
+
+export async function addRecipeToFolderAction(folderName: string, recipeId: string): Promise<void> {
+  const userId = await getUserIdFromSession();
+  await addRecipeToFolder(userId, folderName, recipeId);
+}
+
+export async function removeRecipeFromFolderAction(folderName: string, recipeId: string): Promise<void> {
+  const userId = await getUserIdFromSession();
+  await removeRecipeFromFolder(userId, folderName, recipeId);
+}
+
+export async function checkRecipeInFolder(folderName: string, recipeId: string): Promise<boolean> {
+  const userId = await getUserIdFromSession();
+  return await isRecipeInFolder(userId, folderName, recipeId);
 }

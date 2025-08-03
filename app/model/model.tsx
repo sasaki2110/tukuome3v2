@@ -12,6 +12,7 @@ export type Repo = {
     tag: string,
     ismain: number, // = 9 が既読
     issub: number,  // 未使用
+    foldered?: boolean, // フォルダーに登録済みかどうか
 }
 
 // タグ型（DB型）
@@ -85,4 +86,11 @@ export type Auther = {
   name: string,
   recipesu: number,
   image: string,
+}
+
+// フォルダー型
+export type Folder = {
+  userid: string,
+  foldername: string,
+  idofrepos: string,
 }

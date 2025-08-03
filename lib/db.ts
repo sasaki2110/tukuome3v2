@@ -23,7 +23,14 @@ function getModeWhereClause(mode: string): string {
 export async function getRepos(userId: string, limit: number, offset: number, mode: string): Promise<{ repos: Repo[], hasMore: boolean }> {
   const modeWhereClause = getModeWhereClause(mode);
   const query = `
-    SELECT * FROM repo
+    SELECT
+      *,
+      EXISTS (
+        SELECT 1
+        FROM folder
+        WHERE userid = $1 AND ' ' || idofrepos || ' ' LIKE '%' || repo.id_n || '%'
+      ) as foldered
+    FROM repo
     WHERE userid = $1 ${modeWhereClause}
     ORDER BY reposu_n DESC, id_n DESC
     LIMIT $2 OFFSET $3;
@@ -47,7 +54,14 @@ export async function getReposByTitle(userId: string, searchTerm: string, limit:
   const str = "%" + searchTerm + "%";
   const modeWhereClause = getModeWhereClause(mode);
   const query = `
-    SELECT * FROM repo
+    SELECT
+      *,
+      EXISTS (
+        SELECT 1
+        FROM folder
+        WHERE userid = $1 AND ' ' || idofrepos || ' ' LIKE '%' || repo.id_n || '%'
+      ) as foldered
+    FROM repo
     WHERE userid = $1 AND title LIKE $2 ${modeWhereClause}
     ORDER BY reposu_n DESC, id_n DESC
     LIMIT $3 OFFSET $4;
@@ -72,12 +86,54 @@ export async function getReposByTag(userId: string, tagName: string, limit: numb
   const str = "%" + tagName + "%";
   const modeWhereClause = getModeWhereClause(mode);
   const query = `
-    SELECT * FROM repo
+    SELECT
+      *,
+      EXISTS (
+        SELECT 1
+        FROM folder
+        WHERE userid = $1 AND ' ' || idofrepos || ' ' LIKE '%' || repo.id_n || '%'
+      ) as foldered
+    FROM repo
     WHERE userid = $1 AND tag LIKE $2 ${modeWhereClause}
     ORDER BY reposu_n DESC, id_n DESC
     LIMIT $3 OFFSET $4;
   `;
   const { rows } = await sql.query(query, [userId, str, limit, offset]);
+
+  const hasMore = rows.length === limit;
+
+  return { repos: rows as Repo[], hasMore };
+}
+
+/**
+ * 指定されたフォルダーに含まれるレシピを取得します。
+ * @param userId ユーザーID
+ * @param folderName フォルダー名
+ * @param limit 取得するレシピの最大件数
+ * @param offset スキップするレシピの件数
+ * @param mode 絞り込みモード
+ * @returns Repo型の配列と、まだ取得できるレシピがあるかを示すhasMoreフラグ
+ */
+export async function getReposByFolder(userId: string, folderName: string, limit: number, offset: number, mode: string): Promise<{ repos: Repo[], hasMore: boolean }> {
+  const modeWhereClause = getModeWhereClause(mode);
+  const query = `
+    SELECT
+      r.*,
+      EXISTS (
+        SELECT 1
+        FROM folder
+        WHERE userid = $1 AND ' ' || idofrepos || ' ' LIKE '%' || r.id_n || '%'
+      ) as foldered
+    FROM repo r
+    JOIN folder f ON r.userid = f.userid
+    WHERE r.userid = $1
+      AND f.foldername = $2
+      AND r.id_n::text = ANY(string_to_array(f.idofrepos, ' '))
+      ${modeWhereClause}
+    ORDER BY r.reposu_n DESC, r.id_n DESC
+    LIMIT $3 OFFSET $4;
+  `;
+  const { rows } = await sql.query(query, [userId, folderName, limit, offset]);
 
   const hasMore = rows.length === limit;
 
@@ -204,4 +260,73 @@ export async function getDispTagsOptimized(userId: string, level: number, value:
   });
 
   return dispTags;
+}
+
+// フォルダー関連のDB操作
+
+import { Folder } from '@/app/model/model';
+
+export async function getFolders(userId: string): Promise<Folder[]> {
+  const { rows } = await sql<Folder>`
+    SELECT * FROM folder WHERE userid = ${userId};
+  `;
+  return rows;
+}
+
+export async function addFolder(userId: string, folderName: string): Promise<void> {
+  await sql`
+    INSERT INTO folder (userid, foldername, idofrepos) VALUES (${userId}, ${folderName}, '');
+  `;
+}
+
+export async function deleteFolder(userId: string, folderName: string): Promise<void> {
+  await sql`
+    DELETE FROM folder WHERE userid = ${userId} AND foldername = ${folderName};
+  `;
+}
+
+export async function addRecipeToFolder(userId: string, folderName: string, recipeId: string): Promise<void> {
+  await sql`
+    UPDATE folder
+    SET idofrepos = idofrepos || ' ' || ${recipeId}
+    WHERE userid = ${userId} AND foldername = ${folderName};
+  `;
+}
+
+export async function removeRecipeFromFolder(userId: string, folderName: string, recipeId: string): Promise<void> {
+  await sql`
+    UPDATE folder
+    SET idofrepos = trim(replace(' ' || idofrepos || ' ', ' ' || ${recipeId} || ' ', ' '))
+    WHERE userid = ${userId} AND foldername = ${folderName};
+  `;
+}
+
+export async function isRecipeInFolder(userId: string, folderName: string, recipeId: string): Promise<boolean> {
+  const { rows } = await sql<{
+    exists: boolean;
+  }>`
+    SELECT EXISTS (
+      SELECT 1
+      FROM folder
+      WHERE userid = ${userId} AND foldername = ${folderName} AND ' ' || idofrepos || ' ' LIKE '% ' || ${recipeId} || ' %'
+    ) as exists;
+  `;
+  return rows[0].exists;
+}
+
+export async function getFoldersWithImages(userId: string): Promise<(Folder & { images: string[] })[]> {
+  const { rows } = await sql`
+    SELECT
+      f.foldername,
+      f.idofrepos,
+      ARRAY(
+        SELECT r.image
+        FROM repo r
+        WHERE r.userid = f.userid AND r.id_n::text = ANY(string_to_array(f.idofrepos, ' '))
+        LIMIT 4
+      ) as images
+    FROM folder f
+    WHERE f.userid = ${userId};
+  `;
+  return rows as (Folder & { images: string[] })[];
 }

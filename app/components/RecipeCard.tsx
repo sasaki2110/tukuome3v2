@@ -2,15 +2,17 @@ import Image from 'next/image';
 import type { Repo } from '@/app/model/model';
 import { CommentDialog } from './CommentDialog'; // CommentDialogをインポート
 import { useState } from 'react'; // useStateをインポート
+import { Star } from 'lucide-react'; // Starをインポート
 
 type RecipeCardProps = {
   recipe: Repo;
   onLikeClick: () => void; // 親にクリックを通知する関数
   isLiking: boolean;
   onCommentSubmit: (recipeId: number, comment: string) => void; // コメント投稿を親に通知する関数
+  onFolderClick: () => void; // フォルダーアイコンクリックを親に通知する関数
 };
 
-const RecipeCard = ({ recipe, onLikeClick, isLiking, onCommentSubmit }: RecipeCardProps) => {
+const RecipeCard = ({ recipe, onLikeClick, isLiking, onCommentSubmit, onFolderClick }: RecipeCardProps) => {
   const [showCommentDialog, setShowCommentDialog] = useState(false); // コメントダイアログの表示状態
 
   // いいね数をカンマ区切りにする関数
@@ -69,7 +71,9 @@ const RecipeCard = ({ recipe, onLikeClick, isLiking, onCommentSubmit }: RecipeCa
         </button>
 
         {/* フォルダ（星） */}
-        <span>{'⭐'}</span>
+        <button onClick={onFolderClick} className="cursor-pointer">
+          <Star fill={recipe.foldered ? 'yellow' : 'none'} stroke={recipe.foldered ? 'black' : 'currentColor'} />
+        </button>
 
         {/* コメントボタン */}
         <button onClick={handleOpenCommentDialog} className={`cursor-pointer ${recipe.comment ? 'text-blue-500' : ''}`}>

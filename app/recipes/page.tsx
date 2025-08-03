@@ -10,6 +10,7 @@ interface RecipesPageProps {
     title?: string | string[] | null;
     mode?: string | string[] | null;
     tag?: string | string[] | null;
+    folder?: string | string[] | null;
   }>;
 }
 
@@ -18,13 +19,15 @@ const RecipesPage = async ({ searchParams }: RecipesPageProps) => {
   const searchTerm = Array.isArray(resolvedSearchParams?.title) ? resolvedSearchParams.title[0] : resolvedSearchParams?.title || '';
   const searchMode = Array.isArray(resolvedSearchParams?.mode) ? resolvedSearchParams.mode[0] : resolvedSearchParams?.mode || 'all';
   const searchTag = Array.isArray(resolvedSearchParams?.tag) ? resolvedSearchParams.tag[0] : resolvedSearchParams?.tag || '';
+  const folderName = Array.isArray(resolvedSearchParams?.folder) ? resolvedSearchParams.folder[0] : resolvedSearchParams?.folder || '';
 
   const { recipes: initialRecipes, hasMore: initialHasMore } = await getFilteredRecipes(
     0,
     ITEMS_PER_PAGE,
     searchTerm,
     searchMode,
-    searchTag
+    searchTag,
+    folderName
   );
 
   return (
@@ -39,6 +42,7 @@ const RecipesPage = async ({ searchParams }: RecipesPageProps) => {
           searchTerm={searchTerm}
           searchMode={searchMode}
           searchTag={searchTag}
+          folderName={folderName}
         />
       </div>
     </>

@@ -6,6 +6,7 @@ import { Repo } from "@/app/model/model";
 import { getFilteredRecipes } from "@/lib/services";
 import { calculateNextOffset, ITEMS_PER_PAGE } from "@/lib/constants";
 import { toggleLikeAction, addCommentAction } from "@/app/recipes/actions";
+import { FolderDialog } from './FolderDialog'; // FolderDialogをインポート
 
 interface RecipeListWithLoadMoreProps {
   initialRecipes: Repo[];
@@ -14,6 +15,7 @@ interface RecipeListWithLoadMoreProps {
   searchTerm?: string;
   searchMode?: string;
   searchTag?: string;
+  folderName?: string;
 }
 
 export function RecipeListWithLoadMore({
@@ -23,6 +25,7 @@ export function RecipeListWithLoadMore({
   searchTerm,
   searchMode,
   searchTag,
+  folderName,
 }: RecipeListWithLoadMoreProps) {
   const [recipes, setRecipes] = useState<Repo[]>(initialRecipes);
   const [isPending, startTransition] = useTransition();
@@ -40,6 +43,8 @@ export function RecipeListWithLoadMore({
   const [offset, setOffset] = useState<number>(initialOffset);
   const [hasMore, setHasMore] = useState<boolean>(initialHasMore);
   const [loading, setLoading] = useState<boolean>(false);
+  const [showFolderDialog, setShowFolderDialog] = useState(false);
+  const [selectedRecipe, setSelectedRecipe] = useState<Repo | null>(null);
 
   const handleLikeClick = (recipe: Repo) => {
     setLikingRecipeId(recipe.id_n);
@@ -77,6 +82,11 @@ export function RecipeListWithLoadMore({
     });
   };
 
+  const handleFolderClick = (recipe: Repo) => {
+    setSelectedRecipe(recipe);
+    setShowFolderDialog(true);
+  };
+
   const loadMoreRecipes = async () => {
     setLoading(true);
     const nextOffset = calculateNextOffset(offset);
@@ -85,7 +95,8 @@ export function RecipeListWithLoadMore({
       ITEMS_PER_PAGE,
       searchTerm,
       searchMode,
-      searchTag
+      searchTag,
+      folderName
     );
     setRecipes((prevRecipes) => [...prevRecipes, ...newRecipes]);
     setOffset(nextOffset);
@@ -103,6 +114,7 @@ export function RecipeListWithLoadMore({
             onLikeClick={() => handleLikeClick(recipe)}
             isLiking={isPending && likingRecipeId === recipe.id_n}
             onCommentSubmit={handleCommentSubmit}
+            onFolderClick={() => handleFolderClick(recipe)}
           />
         ))}
       </div>
@@ -117,6 +129,11 @@ export function RecipeListWithLoadMore({
           </button>
         </div>
       )}
+      <FolderDialog
+        isOpen={showFolderDialog}
+        onOpenChange={setShowFolderDialog}
+        recipe={selectedRecipe}
+      />
     </div>
   );
 }
