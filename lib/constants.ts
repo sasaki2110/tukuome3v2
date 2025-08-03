@@ -5,7 +5,7 @@ export const searchModes = [
   { mode: 'others', label: 'その他' },
 ];
 
-export const ITEMS_PER_PAGE = 10;
+export const ITEMS_PER_PAGE = 12;
 
 export function calculateNextOffset(currentOffset: number): number {
   return currentOffset + ITEMS_PER_PAGE;
