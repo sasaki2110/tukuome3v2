@@ -93,4 +93,5 @@ export type Folder = {
   userid: string,
   foldername: string,
   idofrepos: string,
+  isInFolder?: boolean;
 }

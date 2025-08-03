@@ -144,12 +144,12 @@ export async function getDispTags(level: number, value: string): Promise<DispTag
 
 // フォルダー関連のサーバーアクション
 
-import { getFolders, addFolder, deleteFolder, addRecipeToFolder, removeRecipeFromFolder, isRecipeInFolder, getFoldersWithImages } from './db';
+import { getFolders, addFolder, deleteFolder, addRecipeToFolder, removeRecipeFromFolder, getFoldersWithImages } from './db';
 import { Folder } from '@/app/model/model';
 
-export async function fetchFolders(): Promise<Folder[]> {
+export async function fetchFolders(recipeId: string | null): Promise<(Folder & { isInFolder: boolean })[]> {
   const userId = await getUserIdFromSession();
-  return await getFolders(userId);
+  return await getFolders(userId, recipeId);
 }
 
 export async function fetchFoldersWithImages(): Promise<(Folder & { images: string[] })[]> {
@@ -177,7 +177,3 @@ export async function removeRecipeFromFolderAction(folderName: string, recipeId:
   await removeRecipeFromFolder(userId, folderName, recipeId);
 }
 
-export async function checkRecipeInFolder(folderName: string, recipeId: string): Promise<boolean> {
-  const userId = await getUserIdFromSession();
-  return await isRecipeInFolder(userId, folderName, recipeId);
-}

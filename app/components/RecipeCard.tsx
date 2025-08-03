@@ -2,7 +2,7 @@ import Image from 'next/image';
 import type { Repo } from '@/app/model/model';
 import { CommentDialog } from './CommentDialog'; // CommentDialogをインポート
 import { useState } from 'react'; // useStateをインポート
-import { Star } from 'lucide-react'; // Starをインポート
+import { Star, Heart, MessageSquare } from 'lucide-react'; // Star, Heart, MessageSquareをインポート
 
 type RecipeCardProps = {
   recipe: Repo;
@@ -67,7 +67,7 @@ const RecipeCard = ({ recipe, onLikeClick, isLiking, onCommentSubmit, onFolderCl
           onClick={onLikeClick}
           disabled={isLiking}
           className={`cursor-pointer ${isLiking ? 'opacity-50' : ''}`}>
-          <span>{recipe.rank === 1 ? '❤️' : '🤍'}</span>
+          <Heart fill={recipe.rank === 1 ? 'red' : 'none'} stroke={recipe.rank === 1 ? 'red' : 'currentColor'} />
         </button>
 
         {/* フォルダ（星） */}
@@ -77,7 +77,7 @@ const RecipeCard = ({ recipe, onLikeClick, isLiking, onCommentSubmit, onFolderCl
 
         {/* コメントボタン */}
         <button onClick={handleOpenCommentDialog} className={`cursor-pointer ${recipe.comment ? 'text-blue-500' : ''}`}>
-          <span>{recipe.comment ? '💬' : '🗨️'}</span>
+          <MessageSquare fill={recipe.comment ? 'blue' : 'none'} stroke={recipe.comment ? 'blue' : 'currentColor'} />
         </button>
       </div>
 

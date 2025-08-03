@@ -8,7 +8,7 @@ export default async function FoldersPage() {
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">フォルダー一覧</h1>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
         {folders.map((folder) => (
           <Link key={folder.foldername} href={`/recipes?folder=${encodeURIComponent(folder.foldername)}`}>
             <div className="border rounded-lg overflow-hidden shadow-lg h-full flex flex-col">
@@ -16,9 +16,13 @@ export default async function FoldersPage() {
                 <h2 className="text-xl font-bold">{folder.foldername}</h2>
               </div>
               <div className="grid grid-cols-2 gap-1 flex-grow">
-                {folder.images.map((image, index) => (
-                  <div key={index} className="relative h-24">
-                    <Image src={image} alt={`${folder.foldername} recipe image ${index + 1}`} layout="fill" objectFit="cover" />
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <div key={index} className="relative h-24 bg-gray-200 flex items-center justify-center rounded-md">
+                    {folder.images[index] ? (
+                      <Image src={folder.images[index]} alt={`${folder.foldername} recipe image ${index + 1}`} layout="fill" objectFit="cover" className="rounded-md" />
+                    ) : (
+                      <span className="text-gray-500 text-xs">No Image</span>
+                    )}
                   </div>
                 ))}
               </div>

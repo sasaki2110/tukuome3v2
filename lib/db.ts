@@ -266,11 +266,34 @@ export async function getDispTagsOptimized(userId: string, level: number, value:
 
 import { Folder } from '@/app/model/model';
 
-export async function getFolders(userId: string): Promise<Folder[]> {
-  const { rows } = await sql<Folder>`
-    SELECT * FROM folder WHERE userid = ${userId};
-  `;
-  return rows;
+export async function getFolders(userId: string, recipeId: string | null): Promise<(Folder & { isInFolder: boolean })[]> {
+  let query: string;
+  let params: (string | null)[];
+
+  if (recipeId !== null) {
+    query = `
+      SELECT
+        *,
+        $2 = ANY(string_to_array(idofrepos, ' ')) as "isInFolder"
+      FROM folder
+      WHERE userid = $1
+      ORDER BY foldername ASC;
+    `;
+    params = [userId, recipeId];
+  } else {
+    query = `
+      SELECT
+        *,
+        FALSE as "isInFolder"
+      FROM folder
+      WHERE userid = $1
+      ORDER BY foldername ASC;
+    `;
+    params = [userId];
+  }
+
+  const { rows } = await sql.query(query, params);
+  return rows as (Folder & { isInFolder: boolean })[];
 }
 
 export async function addFolder(userId: string, folderName: string): Promise<void> {
@@ -326,7 +349,8 @@ export async function getFoldersWithImages(userId: string): Promise<(Folder & { 
         LIMIT 4
       ) as images
     FROM folder f
-    WHERE f.userid = ${userId};
+    WHERE f.userid = ${userId}
+    ORDER BY f.foldername ASC;
   `;
   return rows as (Folder & { images: string[] })[];
 }

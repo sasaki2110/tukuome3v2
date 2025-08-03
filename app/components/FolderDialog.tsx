@@ -8,6 +8,16 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Trash2, Star } from 'lucide-react';
@@ -19,7 +29,6 @@ import {
   removeFolder,
   addRecipeToFolderAction,
   removeRecipeFromFolderAction,
-  checkRecipeInFolder,
 } from '@/lib/services';
 
 interface FolderDialogProps {
@@ -29,36 +38,30 @@ interface FolderDialogProps {
 }
 
 export function FolderDialog({ isOpen, onOpenChange, recipe }: FolderDialogProps) {
-  const [folders, setFolders] = useState<Folder[]>([]);
+  const [folders, setFolders] = useState<(Folder & { isInFolder: boolean })[]>([]);
   const [newFolderName, setNewFolderName] = useState('');
-  const [recipeInFolderStatus, setRecipeInFolderStatus] = useState<Record<string, boolean>>({});
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [folderToDelete, setFolderToDelete] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false); // 新しい状態変数
 
   const loadFolders = useCallback(async () => {
-    const fetchedFolders = await fetchFolders();
-    setFolders(fetchedFolders);
-  }, []);
-
-  const checkAllFolders = useCallback(async () => {
     if (!recipe) return;
-    const status: Record<string, boolean> = {};
-    for (const folder of folders) {
-      const isInFolder = await checkRecipeInFolder(folder.foldername, String(recipe.id_n));
-      status[folder.foldername] = isInFolder;
-    }
-    setRecipeInFolderStatus(status);
-  }, [recipe, folders]);
-
-  useEffect(() => {
-    if (isOpen) {
-      loadFolders();
-    }
-  }, [isOpen, loadFolders]);
+    const fetchedFolders = await fetchFolders(String(recipe.id_n));
+    setFolders(fetchedFolders);
+  }, [recipe]);
 
   useEffect(() => {
     if (isOpen && recipe) {
-      checkAllFolders();
+      loadFolders();
     }
-  }, [isOpen, recipe, checkAllFolders]);
+    if (isOpen) {
+      // DialogContentにフォーカスを当てる
+      const dialogContent = document.querySelector('[data-radix-dialog-content]');
+      if (dialogContent) {
+        (dialogContent as HTMLElement).focus();
+      }
+    }
+  }, [isOpen, recipe, loadFolders]);
 
   const handleAddFolder = async () => {
     if (newFolderName.trim() === '') return;
@@ -67,27 +70,46 @@ export function FolderDialog({ isOpen, onOpenChange, recipe }: FolderDialogProps
     loadFolders();
   };
 
-  const handleDeleteFolder = async (folderName: string) => {
-    await removeFolder(folderName);
-    loadFolders();
+  const handleDeleteFolderClick = (folderName: string) => {
+    setFolderToDelete(folderName);
+    setShowConfirmDialog(true);
   };
 
-  const handleToggleRecipeInFolder = async (folderName: string) => {
-    if (!recipe) return;
-    const recipeId = String(recipe.id_n);
-    const isInFolder = recipeInFolderStatus[folderName];
-
-    if (isInFolder) {
-      await removeRecipeFromFolderAction(folderName, recipeId);
-    } else {
-      await addRecipeToFolderAction(folderName, recipeId);
+  const handleConfirmDelete = async () => {
+    if (folderToDelete) {
+      await removeFolder(folderToDelete);
+      loadFolders();
+      setFolderToDelete(null);
     }
-    checkAllFolders();
+    setShowConfirmDialog(false);
+  };
+
+  const handleCancelDelete = () => {
+    setFolderToDelete(null);
+    setShowConfirmDialog(false);
+  };
+
+  const handleToggleRecipeInFolder = async (folderName: string, isInFolder: boolean) => {
+    if (!recipe || isProcessing) return; // 処理中は多重クリックを防止
+
+    setIsProcessing(true); // 処理開始
+    const recipeId = String(recipe.id_n);
+
+    try {
+      if (isInFolder) {
+        await removeRecipeFromFolderAction(folderName, recipeId);
+      } else {
+        await addRecipeToFolderAction(folderName, recipeId);
+      }
+      await loadFolders(); // 処理完了後にフォルダリストを再読み込み
+    } finally {
+      setIsProcessing(false); // 処理終了
+    }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent tabIndex={-1}>
         <DialogHeader>
           <DialogTitle>フォルダーに追加</DialogTitle>
         </DialogHeader>
@@ -101,15 +123,15 @@ export function FolderDialog({ isOpen, onOpenChange, recipe }: FolderDialogProps
         )}
         <div className="py-4">
           <h4 className="font-bold">フォルダー一覧</h4>
-          <ul>
+          <ul className={isProcessing ? 'opacity-50 pointer-events-none' : ''}>
             {folders.map((folder) => (
               <li key={folder.foldername} className="flex items-center justify-between py-1">
                 <span>{folder.foldername}</span>
-                <div className="flex items-center space-x-2">
-                  <button onClick={() => handleToggleRecipeInFolder(folder.foldername)}>
-                    <Star fill={recipeInFolderStatus[folder.foldername] ? 'yellow' : 'none'} />
+                <div className="flex items-center">
+                  <button onClick={() => handleToggleRecipeInFolder(folder.foldername, folder.isInFolder)} className={`mr-4 ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                    <Star fill={folder.isInFolder ? 'yellow' : 'none'} />
                   </button>
-                  <button onClick={() => handleDeleteFolder(folder.foldername)}>
+                  <button onClick={() => handleDeleteFolderClick(folder.foldername)}>
                     <Trash2 />
                   </button>
                 </div>
@@ -131,6 +153,21 @@ export function FolderDialog({ isOpen, onOpenChange, recipe }: FolderDialogProps
         <DialogFooter>
           <Button onClick={() => onOpenChange(false)}>閉じる</Button>
         </DialogFooter>
+
+        <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>フォルダーを削除しますか？</AlertDialogTitle>
+              <AlertDialogDescription>
+                この操作は元に戻せません。フォルダー内のレシピは削除されません。
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={handleCancelDelete}>キャンセル</AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmDelete}>削除</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </DialogContent>
     </Dialog>
   );
