@@ -3,14 +3,12 @@
 import { useSearchParams, usePathname, useRouter } from 'next/navigation'
 import { searchModes } from '@/lib/constants'
 
-interface SearchModeMenuProps {
-  currentMode: string;
-}
-
-export default function SearchModeMenu({ currentMode }: SearchModeMenuProps) {
+export default function SearchModeMenu() {
   const searchParams = useSearchParams()
   const pathname = usePathname()
   const router = useRouter()
+
+  const currentMode = searchParams.get('mode') || 'all'
 
   const createPageURL = (mode: string) => {
     const params = new URLSearchParams(searchParams)

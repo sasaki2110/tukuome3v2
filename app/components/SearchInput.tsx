@@ -3,11 +3,7 @@
 import { useState, KeyboardEvent } from 'react';
 import { useSearchParams, usePathname, useRouter } from 'next/navigation';
 
-type SearchInputProps = {
-  // onSearch: (searchTerm: string, mode: string | null, rank: string | null) => void;
-};
-
-const SearchInput = ({ /* onSearch */ }: SearchInputProps) => {
+const SearchInput = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const searchParams = useSearchParams();
   const pathname = usePathname();

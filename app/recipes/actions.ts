@@ -1,6 +1,5 @@
 'use server';
 
-import { redirect } from 'next/navigation';
 import { setLike, addComment } from '@/lib/services';
 
 export const searchRecipes = async (searchTerm: string, mode: string | null, rank: string | null) => {

@@ -4,20 +4,9 @@ import { useState } from 'react';
 import SearchInput from "./SearchInput";
 import SearchModeMenu from "./SearchModeMenu";
 import RankFilterMenu from "./RankFilterMenu";
-import { searchRecipes } from "@/app/recipes/actions";
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
-interface RecipeFilterControlsProps {
-  searchTerm: string;
-  searchMode: string;
-  searchRank: string;
-}
-
-export default function RecipeFilterControls({
-  searchTerm,
-  searchMode,
-  searchRank,
-}: RecipeFilterControlsProps) {
+export default function RecipeFilterControls() {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
@@ -32,10 +21,10 @@ export default function RecipeFilterControls({
           <SearchInput />
         </div>
         <div className="w-full md:w-1/3 border border-gray-300 rounded-md p-2">
-          <SearchModeMenu currentMode={searchMode} />
+          <SearchModeMenu />
         </div>
         <div className="w-full md:w-1/3 border border-gray-300 rounded-md p-2">
-          <RankFilterMenu currentRank={searchRank} />
+          <RankFilterMenu />
         </div>
       </div>
     </div>

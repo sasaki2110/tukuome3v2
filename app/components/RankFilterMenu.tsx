@@ -3,14 +3,12 @@
 import { useSearchParams, usePathname, useRouter } from 'next/navigation'
 import { Heart } from 'lucide-react';
 
-interface RankFilterMenuProps {
-  currentRank: string;
-}
-
-export default function RankFilterMenu({ currentRank }: RankFilterMenuProps) {
+export default function RankFilterMenu() {
   const searchParams = useSearchParams()
   const pathname = usePathname()
   const router = useRouter()
+
+  const currentRank = searchParams.get('rank') || 'all'
 
   const rankOptions = [
     { rank: 'all', label: '全部' },
