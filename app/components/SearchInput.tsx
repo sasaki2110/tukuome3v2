@@ -11,12 +11,27 @@ const SearchInput = () => {
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
-      const params = new URLSearchParams(searchParams);
-      params.delete('tag');
+      const params = new URLSearchParams(); // 新しいURLSearchParamsを作成
       if (searchTerm) {
-        params.set('title', searchTerm);
+        if (/^[0-9]+$/.test(searchTerm)) {
+          // 数字のみの場合はtitleだけを設定
+          params.set('title', searchTerm);
+        } else {
+          // それ以外の場合は既存のパラメータを維持しつつtitleを設定
+          const existingParams = new URLSearchParams(searchParams);
+          existingParams.forEach((value, key) => {
+            params.set(key, value);
+          });
+          params.set('title', searchTerm);
+          params.delete('tag'); // tagは削除
+        }
       } else {
-        params.delete('title');
+        // 検索語が空の場合はtitleを削除
+        const existingParams = new URLSearchParams(searchParams);
+        existingParams.delete('title');
+        existingParams.forEach((value, key) => {
+          params.set(key, value);
+        });
       }
       router.push(`${pathname}?${params.toString()}`);
     }

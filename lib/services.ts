@@ -1,6 +1,6 @@
 'use server';
 
-import { getRepos, getReposByTitle, getReposByTag, updateLikeStatus, updateComment, getAuthers, getDispTagsOptimized, getReposByFolder } from './db';
+import { getRepos, getReposByTitle, getReposByTag, getRepoById, updateLikeStatus, updateComment, getAuthers, getDispTagsOptimized, getReposByFolder } from './db';
 import { Repo, Auther, DispTag } from '@/app/model/model';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -76,6 +76,18 @@ export async function getRecipesByFolder(folderName: string, offset: number, lim
   return { recipes: repos, hasMore };
 }
 
+/**
+ * 指定されたIDでレシピを検索します。
+ * @param recipeId 検索するレシピID
+ * @returns Repo型の配列と、hasMoreフラグ
+ */
+export async function getRecipeById(recipeId: number): Promise<{ recipes: Repo[], hasMore: boolean }> {
+  const userId = await getUserIdFromSession();
+
+  const { repos, hasMore } = await getRepoById(userId, recipeId);
+  return { recipes: repos, hasMore };
+}
+
 export async function getFilteredRecipes(
   offset: number,
   limit: number,
@@ -88,7 +100,9 @@ export async function getFilteredRecipes(
   const mode = searchMode || 'all';
   const rank = searchRank || 'all';
 
-  if (folderName) {
+  if (searchTerm && /^[0-9]+$/.test(searchTerm)) {
+    return await getRecipeById(parseInt(searchTerm, 10));
+  } else if (folderName) {
     return await getRecipesByFolder(folderName, offset, limit, mode, rank);
   } else if (searchTag) {
     return await getRecipesByTag(searchTag, offset, limit, mode, rank);
@@ -178,4 +192,3 @@ export async function removeRecipeFromFolderAction(folderName: string, recipeId:
   const userId = await getUserIdFromSession();
   await removeRecipeFromFolder(userId, folderName, recipeId);
 }
-

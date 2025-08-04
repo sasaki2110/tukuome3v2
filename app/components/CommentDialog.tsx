@@ -45,7 +45,7 @@ export const CommentDialog: React.FC<CommentDialogProps> = ({
         <DialogHeader>
           <DialogTitle>{recipeName}</DialogTitle>
         </DialogHeader>
-        <Textarea value={comment} onChange={handleCommentChange} />
+        <Textarea value={comment} onChange={handleCommentChange} className="text-xl md:text-xl" />
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             キャンセル

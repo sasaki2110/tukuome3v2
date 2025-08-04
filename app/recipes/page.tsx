@@ -16,10 +16,13 @@ interface RecipesPageProps {
 const RecipesPage = async ({ searchParams }: RecipesPageProps) => {
   const resolvedSearchParams = await searchParams;
   const searchTerm = Array.isArray(resolvedSearchParams?.title) ? resolvedSearchParams.title[0] : resolvedSearchParams?.title || '';
-  const searchMode = Array.isArray(resolvedSearchParams?.mode) ? resolvedSearchParams.mode[0] : resolvedSearchParams?.mode || 'all';
-  const searchTag = Array.isArray(resolvedSearchParams?.tag) ? resolvedSearchParams.tag[0] : resolvedSearchParams?.tag || '';
-  const folderName = Array.isArray(resolvedSearchParams?.folder) ? resolvedSearchParams.folder[0] : resolvedSearchParams?.folder || '';
-  const searchRank = Array.isArray(resolvedSearchParams?.rank) ? resolvedSearchParams.rank[0] : resolvedSearchParams?.rank || 'all';
+  
+  const isIdSearch = /^[0-9]+$/.test(searchTerm);
+
+  const searchMode = isIdSearch ? 'all' : (Array.isArray(resolvedSearchParams?.mode) ? resolvedSearchParams.mode[0] : resolvedSearchParams?.mode || 'all');
+  const searchTag = isIdSearch ? '' : (Array.isArray(resolvedSearchParams?.tag) ? resolvedSearchParams.tag[0] : resolvedSearchParams?.tag || '');
+  const folderName = isIdSearch ? '' : (Array.isArray(resolvedSearchParams?.folder) ? resolvedSearchParams.folder[0] : resolvedSearchParams?.folder || '');
+  const searchRank = isIdSearch ? 'all' : (Array.isArray(resolvedSearchParams?.rank) ? resolvedSearchParams.rank[0] : resolvedSearchParams?.rank || 'all');
 
   const { recipes: initialRecipes, hasMore: initialHasMore } = await getFilteredRecipes(
     0,

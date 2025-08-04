@@ -157,6 +157,29 @@ export async function getReposByFolder(userId: string, folderName: string, limit
 }
 
 /**
+ * 指定されたIDでレシピを検索します。
+ * @param userId ユーザーID
+ * @param recipeId 検索するレシピID
+ * @returns Repo型の配列と、hasMoreフラグ
+ */
+export async function getRepoById(userId: string, recipeId: number): Promise<{ repos: Repo[], hasMore: boolean }> {
+  const query = `
+    SELECT
+      *,
+      EXISTS (
+        SELECT 1
+        FROM folder
+        WHERE userid = $1 AND ' ' || idofrepos || ' ' LIKE '%' || repo.id_n || '%'
+      ) as foldered
+    FROM repo
+    WHERE userid = $1 AND id_n = $2;
+  `;
+  const { rows } = await sql.query(query, [userId, recipeId]);
+
+  return { repos: rows as Repo[], hasMore: false };
+}
+
+/**
  * 指定されたレシピの現在のいいね状態（rank）を取得します。
  * @param userId ユーザーID
  * @param recipeId レシピID
