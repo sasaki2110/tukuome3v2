@@ -12,6 +12,7 @@ const SearchInput = () => {
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
       const params = new URLSearchParams(searchParams);
+      params.delete('tag');
       if (searchTerm) {
         params.set('title', searchTerm);
       } else {

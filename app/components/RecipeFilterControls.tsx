@@ -10,7 +10,7 @@ export default function RecipeFilterControls() {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
-    <div className="fixed top-[70px] left-0 right-0 z-10 bg-white shadow-md p-4">
+    <div className="fixed top-[70px] left-0 right-0 z-40 bg-white shadow-md p-4">
       <div className="flex justify-end md:hidden">
         <button onClick={() => setIsExpanded(!isExpanded)} className="p-2 rounded-md bg-gray-100">
           {isExpanded ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
