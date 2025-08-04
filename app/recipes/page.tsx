@@ -37,7 +37,7 @@ const RecipesPage = async ({ searchParams }: RecipesPageProps) => {
   return (
     <>
       <RecipeFilterControls />
-      <div className="container mx-auto p-4 pt-[100px]">
+      <div className="p-4 pt-[100px]">
         <RecipeListWithLoadMore
           key={`${searchTerm}-${searchMode}-${searchTag}-${searchRank}`}
           initialRecipes={initialRecipes}
