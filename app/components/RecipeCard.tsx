@@ -3,17 +3,18 @@ import type { Repo } from '@/app/model/model';
 import { CommentDialog } from './CommentDialog'; // CommentDialogをインポート
 import { useState } from 'react'; // useStateをインポート
 import { Star, Heart, MessageSquare } from 'lucide-react'; // Star, Heart, MessageSquareをインポート
+import LikeDialog from './LikeDialog'; // LikeDialogをインポート
 
 type RecipeCardProps = {
   recipe: Repo;
-  onLikeClick: () => void; // 親にクリックを通知する関数
-  isLiking: boolean;
+  onRankChange: (recipeId: number, rank: number) => void; // rank変更を親に通知する関数
   onCommentSubmit: (recipeId: number, comment: string) => void; // コメント投稿を親に通知する関数
   onFolderClick: () => void; // フォルダーアイコンクリックを親に通知する関数
 };
 
-const RecipeCard = ({ recipe, onLikeClick, isLiking, onCommentSubmit, onFolderClick }: RecipeCardProps) => {
+const RecipeCard = ({ recipe, onRankChange, onCommentSubmit, onFolderClick }: RecipeCardProps) => {
   const [showCommentDialog, setShowCommentDialog] = useState(false); // コメントダイアログの表示状態
+  const [showLikeDialog, setShowLikeDialog] = useState(false); // いいねダイアログの表示状態
 
   // いいね数をカンマ区切りにする関数
   const formatLikes = (num: number) => {
@@ -31,6 +32,19 @@ const RecipeCard = ({ recipe, onLikeClick, isLiking, onCommentSubmit, onFolderCl
   const handleSubmitComment = (comment: string) => {
     onCommentSubmit(recipe.id_n, comment);
     setShowCommentDialog(false);
+  };
+
+  const handleOpenLikeDialog = () => {
+    setShowLikeDialog(true);
+  };
+
+  const handleCloseLikeDialog = () => {
+    setShowLikeDialog(false);
+  };
+
+  const handleSubmitLike = (rank: number) => {
+    onRankChange(recipe.id_n, rank);
+    setShowLikeDialog(false);
   };
 
   return (
@@ -64,10 +78,12 @@ const RecipeCard = ({ recipe, onLikeClick, isLiking, onCommentSubmit, onFolderCl
 
         {/* いいねボタン */}
         <button
-          onClick={onLikeClick}
-          disabled={isLiking}
-          className={`cursor-pointer ${isLiking ? 'opacity-50' : ''}`}>
-          <Heart fill={recipe.rank === 1 ? 'red' : 'none'} stroke={recipe.rank === 1 ? 'red' : 'currentColor'} />
+          onClick={handleOpenLikeDialog}
+          className="cursor-pointer">
+          <Heart
+            fill={recipe.rank === 1 ? 'red' : recipe.rank === 2 ? 'orange' : 'none'}
+            stroke={recipe.rank === 1 ? 'red' : recipe.rank === 2 ? 'orange' : 'currentColor'}
+          />
         </button>
 
         {/* フォルダ（星） */}
@@ -88,6 +104,14 @@ const RecipeCard = ({ recipe, onLikeClick, isLiking, onCommentSubmit, onFolderCl
         currentComment={recipe.comment || ''} // 既存のコメントがあれば表示
         onClose={handleCloseCommentDialog}
         onSubmit={handleSubmitComment}
+      />
+
+      {/* LikeDialogをレンダリング */}
+      <LikeDialog
+        isOpen={showLikeDialog}
+        currentRank={recipe.rank}
+        onClose={handleCloseLikeDialog}
+        onSubmit={handleSubmitLike}
       />
     </div>
   );

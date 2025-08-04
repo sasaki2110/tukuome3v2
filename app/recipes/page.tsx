@@ -1,9 +1,7 @@
 import { getFilteredRecipes } from "@/lib/services";
 import { ITEMS_PER_PAGE } from "@/lib/constants";
 import { RecipeListWithLoadMore } from "../components/RecipeListWithLoadMore";
-import SearchInput from "../components/SearchInput";
-
-import { searchRecipes } from "./actions";
+import RecipeFilterControls from "../components/RecipeFilterControls";
 
 interface RecipesPageProps {
   searchParams: Promise<{
@@ -11,6 +9,7 @@ interface RecipesPageProps {
     mode?: string | string[] | null;
     tag?: string | string[] | null;
     folder?: string | string[] | null;
+    rank?: string | string[] | null;
   }>;
 }
 
@@ -20,6 +19,7 @@ const RecipesPage = async ({ searchParams }: RecipesPageProps) => {
   const searchMode = Array.isArray(resolvedSearchParams?.mode) ? resolvedSearchParams.mode[0] : resolvedSearchParams?.mode || 'all';
   const searchTag = Array.isArray(resolvedSearchParams?.tag) ? resolvedSearchParams.tag[0] : resolvedSearchParams?.tag || '';
   const folderName = Array.isArray(resolvedSearchParams?.folder) ? resolvedSearchParams.folder[0] : resolvedSearchParams?.folder || '';
+  const searchRank = Array.isArray(resolvedSearchParams?.rank) ? resolvedSearchParams.rank[0] : resolvedSearchParams?.rank || 'all';
 
   const { recipes: initialRecipes, hasMore: initialHasMore } = await getFilteredRecipes(
     0,
@@ -27,15 +27,16 @@ const RecipesPage = async ({ searchParams }: RecipesPageProps) => {
     searchTerm,
     searchMode,
     searchTag,
-    folderName
+    folderName,
+    searchRank
   );
 
   return (
     <>
-      <SearchInput onSearch={searchRecipes} />
-      <div className="container mx-auto p-4">
+      <RecipeFilterControls searchTerm={searchTerm} searchMode={searchMode} searchRank={searchRank} />
+      <div className="container mx-auto p-4 pt-[100px]">
         <RecipeListWithLoadMore
-          key={`${searchTerm}-${searchMode}-${searchTag}`}
+          key={`${searchTerm}-${searchMode}-${searchTag}-${searchRank}`}
           initialRecipes={initialRecipes}
           initialOffset={0}
           initialHasMore={initialHasMore}
@@ -43,6 +44,7 @@ const RecipesPage = async ({ searchParams }: RecipesPageProps) => {
           searchMode={searchMode}
           searchTag={searchTag}
           folderName={folderName}
+          searchRank={searchRank}
         />
       </div>
     </>

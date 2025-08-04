@@ -34,7 +34,6 @@ export default function NavBar() {
           <div className="flex items-center">
             <div className="hidden lg:block ">
               <ul className="flex flex-col lg:flex-row justify-center lg:justify-end items-end">
-                <SearchModeMenu />
                 <Link href="/recipes/tags" className="block px-2 py-2 text-center">タグ検索</Link>
                 <Link href="/recipes/folders" className="block px-2 py-2 text-center">フォルダ</Link>
                 <Link href="/recipes/Authers" className="block px-2 py-2 text-center">作者一覧</Link>
@@ -52,7 +51,6 @@ export default function NavBar() {
         </div>
         <div className={isOpen?"block":"hidden"}>
           <ul className="flex flex-col lg:flex-row justify-center lg:justify-end items-center">
-            <SearchModeMenu onLinkClick={() => setIsOpen(false)} />
             <Link href="/recipes/tags" onClick={()=> {setIsOpen(!isOpen)}} className="block px-2 py-2 text-center">タグ検索</Link>
             <Link href="/recipes/folders" onClick={()=> {setIsOpen(!isOpen)}} className="block px-2 py-2 text-center">フォルダ</Link>
             <Link href="/recipes/Authers" onClick={()=> {setIsOpen(!isOpen)}} className="block px-2 py-2 text-center">作者一覧</Link>

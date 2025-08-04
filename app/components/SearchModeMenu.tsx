@@ -1,18 +1,16 @@
 'use client'
 
 import { useSearchParams, usePathname, useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { searchModes } from '@/lib/constants'
 
 interface SearchModeMenuProps {
-  onLinkClick?: () => void;
+  currentMode: string;
 }
 
-export default function SearchModeMenu({ onLinkClick }: SearchModeMenuProps) {
+export default function SearchModeMenu({ currentMode }: SearchModeMenuProps) {
   const searchParams = useSearchParams()
   const pathname = usePathname()
-  const {  } = useRouter()
-  const currentMode = searchParams.get('mode') || 'all'
+  const router = useRouter()
 
   const createPageURL = (mode: string) => {
     const params = new URLSearchParams(searchParams)
@@ -22,18 +20,17 @@ export default function SearchModeMenu({ onLinkClick }: SearchModeMenuProps) {
 
   return (
     <div className="relative">
-      <div className="flex items-center">
+      <div className="flex items-center justify-around">
         {searchModes.map(({ mode, label }) => (
-          <Link
+          <button
             key={mode}
-            href={createPageURL(mode)}
-            onClick={onLinkClick}
-            className={`block px-2 py-2 text-center ${
+            onClick={() => router.push(createPageURL(mode))}
+            className={`block px-2 py-2 text-center whitespace-nowrap ${
               currentMode === mode ? 'text-blue-500' : ''
             }`}
           >
             {label}
-          </Link>
+          </button>
         ))}
       </div>
     </div>

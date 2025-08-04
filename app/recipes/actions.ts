@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation';
 import { setLike, addComment } from '@/lib/services';
 
-export const searchRecipes = async (searchTerm: string, mode: string | null) => {
+export const searchRecipes = async (searchTerm: string, mode: string | null, rank: string | null) => {
   const params = new URLSearchParams();
   if (searchTerm) {
     params.set('title', searchTerm);
@@ -11,7 +11,10 @@ export const searchRecipes = async (searchTerm: string, mode: string | null) => 
   if (mode) {
     params.set('mode', mode);
   }
-  redirect(`/recipes?${params.toString()}`);
+  if (rank) {
+    params.set('rank', rank);
+  }
+  // redirect(`/recipes?${params.toString()}`); // クライアントサイドでrouter.pushを使用するため削除
 };
 
 export const toggleLikeAction = async (recipeId: number, newRank: number) => {

@@ -16,6 +16,7 @@ interface RecipeListWithLoadMoreProps {
   searchMode?: string;
   searchTag?: string;
   folderName?: string;
+  searchRank?: string;
 }
 
 export function RecipeListWithLoadMore({
@@ -26,6 +27,7 @@ export function RecipeListWithLoadMore({
   searchMode,
   searchTag,
   folderName,
+  searchRank,
 }: RecipeListWithLoadMoreProps) {
   const [recipes, setRecipes] = useState<Repo[]>(initialRecipes);
   const [isPending, startTransition] = useTransition();
@@ -46,23 +48,19 @@ export function RecipeListWithLoadMore({
   const [showFolderDialog, setShowFolderDialog] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState<Repo | null>(null);
 
-  const handleLikeClick = (recipe: Repo) => {
-    setLikingRecipeId(recipe.id_n);
+  const handleRankChange = (recipeId: number, newRank: number) => {
     startTransition(async () => {
-      const newRank = recipe.rank === 1 ? 0 : 1;
-
       setOptimisticRecipes({
-        recipeId: recipe.id_n,
+        recipeId: recipeId,
         newRank: newRank,
       });
 
-      await toggleLikeAction(recipe.id_n, newRank);
+      await toggleLikeAction(recipeId, newRank);
 
       const newRecipes = recipes.map((r) =>
-        r.id_n === recipe.id_n ? { ...r, rank: newRank } : r
+        r.id_n === recipeId ? { ...r, rank: newRank } : r
       );
       setRecipes(newRecipes);
-      setLikingRecipeId(null);
     });
   };
 
@@ -96,7 +94,8 @@ export function RecipeListWithLoadMore({
       searchTerm,
       searchMode,
       searchTag,
-      folderName
+      folderName,
+      searchRank
     );
     setRecipes((prevRecipes) => [...prevRecipes, ...newRecipes]);
     setOffset(nextOffset);
@@ -111,8 +110,7 @@ export function RecipeListWithLoadMore({
           <RecipeCard
             key={recipe.id_n}
             recipe={recipe}
-            onLikeClick={() => handleLikeClick(recipe)}
-            isLiking={isPending && likingRecipeId === recipe.id_n}
+            onRankChange={handleRankChange}
             onCommentSubmit={handleCommentSubmit}
             onFolderClick={() => handleFolderClick(recipe)}
           />

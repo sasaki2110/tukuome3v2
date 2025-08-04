@@ -1,25 +1,32 @@
 'use client';
 
 import { useState, KeyboardEvent } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, usePathname, useRouter } from 'next/navigation';
 
 type SearchInputProps = {
-  onSearch: (searchTerm: string, mode: string | null) => void;
+  // onSearch: (searchTerm: string, mode: string | null, rank: string | null) => void;
 };
 
-const SearchInput = ({ onSearch }: SearchInputProps) => {
+const SearchInput = ({ /* onSearch */ }: SearchInputProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
-      const mode = searchParams.get('mode');
-      onSearch(searchTerm, mode);
+      const params = new URLSearchParams(searchParams);
+      if (searchTerm) {
+        params.set('title', searchTerm);
+      } else {
+        params.delete('title');
+      }
+      router.push(`${pathname}?${params.toString()}`);
     }
   };
 
   return (
-    <div className="fixed top-[70px] left-0 right-0 z-10 bg-white p-4 shadow-md">
+    <div className="bg-white p-4 shadow-md">
       <label htmlFor="search-title" className="sr-only">探す</label>
       <input
         type="text"

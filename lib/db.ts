@@ -14,14 +14,27 @@ function getModeWhereClause(mode: string): string {
   }
 }
 
+function getRankWhereClause(rank: string): string {
+  switch (rank) {
+    case '1':
+      return 'AND rank = 1';
+    case '2':
+      return 'AND rank = 2';
+    case 'all':
+    default:
+      return '';
+  }
+}
+
 /**
  * 指定されたオフセットから指定された件数のレシピを取得します。
  * @param limit 取得するレシピの最大件数
  * @param offset スキップするレシピの件数
  * @returns Repo型の配列と、まだ取得できるレシピがあるかを示すhasMoreフラグ
  */
-export async function getRepos(userId: string, limit: number, offset: number, mode: string): Promise<{ repos: Repo[], hasMore: boolean }> {
+export async function getRepos(userId: string, limit: number, offset: number, mode: string, rank: string): Promise<{ repos: Repo[], hasMore: boolean }> {
   const modeWhereClause = getModeWhereClause(mode);
+  const rankWhereClause = getRankWhereClause(rank);
   const query = `
     SELECT
       *,
@@ -31,7 +44,7 @@ export async function getRepos(userId: string, limit: number, offset: number, mo
         WHERE userid = $1 AND ' ' || idofrepos || ' ' LIKE '%' || repo.id_n || '%'
       ) as foldered
     FROM repo
-    WHERE userid = $1 ${modeWhereClause}
+    WHERE userid = $1 ${modeWhereClause} ${rankWhereClause}
     ORDER BY reposu_n DESC, id_n DESC
     LIMIT $2 OFFSET $3;
   `;
@@ -50,9 +63,10 @@ export async function getRepos(userId: string, limit: number, offset: number, mo
  * @param offset スキップするレシピの件数
  * @returns Repo型の配列と、まだ取得できるレシピがあるかを示すhasMoreフラグ
  */
-export async function getReposByTitle(userId: string, searchTerm: string, limit: number, offset: number, mode: string): Promise<{ repos: Repo[], hasMore: boolean }> {
+export async function getReposByTitle(userId: string, searchTerm: string, limit: number, offset: number, mode: string, rank: string): Promise<{ repos: Repo[], hasMore: boolean }> {
   const str = "%" + searchTerm + "%";
   const modeWhereClause = getModeWhereClause(mode);
+  const rankWhereClause = getRankWhereClause(rank);
   const query = `
     SELECT
       *,
@@ -62,7 +76,7 @@ export async function getReposByTitle(userId: string, searchTerm: string, limit:
         WHERE userid = $1 AND ' ' || idofrepos || ' ' LIKE '%' || repo.id_n || '%'
       ) as foldered
     FROM repo
-    WHERE userid = $1 AND title LIKE $2 ${modeWhereClause}
+    WHERE userid = $1 AND title LIKE $2 ${modeWhereClause} ${rankWhereClause}
     ORDER BY reposu_n DESC, id_n DESC
     LIMIT $3 OFFSET $4;
   `;
@@ -82,9 +96,10 @@ export async function getReposByTitle(userId: string, searchTerm: string, limit:
  * @param mode 絞り込みモード
  * @returns Repo型の配列と、まだ取得できるレシピがあるかを示すhasMoreフラグ
  */
-export async function getReposByTag(userId: string, tagName: string, limit: number, offset: number, mode: string): Promise<{ repos: Repo[], hasMore: boolean }> {
+export async function getReposByTag(userId: string, tagName: string, limit: number, offset: number, mode: string, rank: string): Promise<{ repos: Repo[], hasMore: boolean }> {
   const str = "%" + tagName + "%";
   const modeWhereClause = getModeWhereClause(mode);
+  const rankWhereClause = getRankWhereClause(rank);
   const query = `
     SELECT
       *,
@@ -94,7 +109,7 @@ export async function getReposByTag(userId: string, tagName: string, limit: numb
         WHERE userid = $1 AND ' ' || idofrepos || ' ' LIKE '%' || repo.id_n || '%'
       ) as foldered
     FROM repo
-    WHERE userid = $1 AND tag LIKE $2 ${modeWhereClause}
+    WHERE userid = $1 AND tag LIKE $2 ${modeWhereClause} ${rankWhereClause}
     ORDER BY reposu_n DESC, id_n DESC
     LIMIT $3 OFFSET $4;
   `;
@@ -114,8 +129,9 @@ export async function getReposByTag(userId: string, tagName: string, limit: numb
  * @param mode 絞り込みモード
  * @returns Repo型の配列と、まだ取得できるレシピがあるかを示すhasMoreフラグ
  */
-export async function getReposByFolder(userId: string, folderName: string, limit: number, offset: number, mode: string): Promise<{ repos: Repo[], hasMore: boolean }> {
+export async function getReposByFolder(userId: string, folderName: string, limit: number, offset: number, mode: string, rank: string): Promise<{ repos: Repo[], hasMore: boolean }> {
   const modeWhereClause = getModeWhereClause(mode);
+  const rankWhereClause = getRankWhereClause(rank);
   const query = `
     SELECT
       r.*,
@@ -129,7 +145,7 @@ export async function getReposByFolder(userId: string, folderName: string, limit
     WHERE r.userid = $1
       AND f.foldername = $2
       AND r.id_n::text = ANY(string_to_array(f.idofrepos, ' '))
-      ${modeWhereClause}
+      ${modeWhereClause} ${rankWhereClause}
     ORDER BY r.reposu_n DESC, r.id_n DESC
     LIMIT $3 OFFSET $4;
   `;
