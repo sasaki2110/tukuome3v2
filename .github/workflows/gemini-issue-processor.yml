@@ -31,22 +31,31 @@ jobs:
             return { title: issue.data.title, body: issue.data.body };
           result-encoding: json
 
-      - name: Run Gemini CLI to process issue
+      - name: Install and Run Gemini CLI
         id: gemini_process
-        uses: google-github-actions/run-gemini-cli@v0
-        with:
-          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
-          prompt: |
-            あなたは優秀なプロジェクトマネージャーです。
-            以下のGitHub issueの内容を分析してください。
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ISSUE_TITLE: ${{ fromJson(steps.get_issue.outputs.result).title }}
+          ISSUE_BODY: ${{ fromJson(steps.get_issue.outputs.result).body }}
+        run: |
+          npm install -g @google/gemini-cli
+          PROMPT=$(cat <<'EOF'
+          あなたは優秀なプロジェクトマネージャーです。
+          以下のGitHub issueの内容を分析してください。
 
-            1.  まずissueの内容を簡潔に要約してください。
-            2.  次にこのissueを解決するために必要な具体的なタスクを箇条書きでリストアップしてください。
+          1.  まずissueの内容を簡潔に要約してください。
+          2.  次にこのissueを解決するために必要な具体的なタスクを箇条書きでリストアップしてください。
 
-            ---
-            **Issue Title: ${{ fromJson(steps.get_issue.outputs.result).title }}**
-            **Issue Body:**
-            ${{ fromJson(steps.get_issue.outputs.result).body }}
+          ---
+          **Issue Title: ${ISSUE_TITLE}**
+          **Issue Body:**
+          ${ISSUE_BODY}
+          EOF
+          )
+          GEMINI_RESPONSE=$(gemini --yolo --prompt "${PROMPT}")
+          echo "gemini_response<<EOF" >> $GITHUB_OUTPUT
+          echo "${GEMINI_RESPONSE}" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Debug Gemini Output
         run: |

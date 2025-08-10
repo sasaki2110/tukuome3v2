@@ -1,0 +1,106 @@
+﻿2025-08-10T06:17:51.0991278Z ##[group]Run google-github-actions/run-gemini-cli@v0
+2025-08-10T06:17:51.0992032Z with:
+2025-08-10T06:17:51.0992763Z   gemini_api_key: ***
+2025-08-10T06:17:51.0993861Z   prompt: あなたは優秀なプロジェクトマネージャーです。
+以下のGitHub issueの内容を分析してください。
+
+1.  まずissueの内容を簡潔に要約してください。
+2.  次にこのissueを解決するために必要な具体的なタスクを箇条書きでリストアップしてください。
+
+---
+**Issue Title: テスト用Issue**
+**Issue Body:**
+Github-Actionsのテスト
+
+
+2025-08-10T06:17:51.0994884Z   use_vertex_ai: false
+2025-08-10T06:17:51.0995447Z   use_gemini_code_assist: false
+2025-08-10T06:17:51.0996043Z   gemini_cli_version: latest
+2025-08-10T06:17:51.0996593Z ##[endgroup]
+2025-08-10T06:17:51.1128441Z ##[group]Run set -euo pipefail
+2025-08-10T06:17:51.1129150Z [36;1mset -euo pipefail[0m
+2025-08-10T06:17:51.1129692Z [36;1m[0m
+2025-08-10T06:17:51.1130394Z [36;1mVERSION_INPUT="${GEMINI_CLI_VERSION:-latest}"[0m
+2025-08-10T06:17:51.1131009Z [36;1m[0m
+2025-08-10T06:17:51.1131753Z [36;1mif [[ "${VERSION_INPUT}" == "latest" || "${VERSION_INPUT}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9\.-]+)?(\+[a-zA-Z0-9\.-]+)?$ ]]; then[0m
+2025-08-10T06:17:51.1132853Z [36;1m  echo "Installing Gemini CLI from npm: @google/gemini-cli@${VERSION_INPUT}"[0m
+2025-08-10T06:17:51.1133674Z [36;1m  npm install -g @google/gemini-cli@"${VERSION_INPUT}"[0m
+2025-08-10T06:17:51.1134328Z [36;1melse[0m
+2025-08-10T06:17:51.1135044Z [36;1m  echo "Installing Gemini CLI from GitHub: github:google-gemini/gemini-cli#${VERSION_INPUT}"[0m
+2025-08-10T06:17:51.1136007Z [36;1m  git clone https://github.com/google-gemini/gemini-cli.git[0m
+2025-08-10T06:17:51.1136675Z [36;1m  cd gemini-cli[0m
+2025-08-10T06:17:51.1137223Z [36;1m  git checkout "${VERSION_INPUT}"[0m
+2025-08-10T06:17:51.1137797Z [36;1m  npm install[0m
+2025-08-10T06:17:51.1138307Z [36;1m  npm run bundle[0m
+2025-08-10T06:17:51.1138836Z [36;1m  npm install -g .[0m
+2025-08-10T06:17:51.1139359Z [36;1mfi[0m
+2025-08-10T06:17:51.1139849Z [36;1mecho "Verifying installation:"[0m
+2025-08-10T06:17:51.1140605Z [36;1mif command -v gemini >/dev/null 2>&1; then[0m
+2025-08-10T06:17:51.1141475Z [36;1m  gemini --version || echo "Gemini CLI installed successfully (version command not available)"[0m
+2025-08-10T06:17:51.1142251Z [36;1melse[0m
+2025-08-10T06:17:51.1142805Z [36;1m  echo "Error: Gemini CLI not found in PATH"[0m
+2025-08-10T06:17:51.1143403Z [36;1m  exit 1[0m
+2025-08-10T06:17:51.1143867Z [36;1mfi[0m
+2025-08-10T06:17:51.1221441Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2025-08-10T06:17:51.1222130Z env:
+2025-08-10T06:17:51.1222602Z   GEMINI_CLI_VERSION: latest
+2025-08-10T06:17:51.1223140Z ##[endgroup]
+2025-08-10T06:17:51.1315535Z Installing Gemini CLI from npm: @google/gemini-cli@latest
+2025-08-10T06:18:05.7137494Z 
+2025-08-10T06:18:05.7138148Z added 432 packages in 13s
+2025-08-10T06:18:05.7138901Z 
+2025-08-10T06:18:05.7139376Z 127 packages are looking for funding
+2025-08-10T06:18:05.7139894Z   run `npm fund` for details
+2025-08-10T06:18:05.7383297Z Verifying installation:
+2025-08-10T06:18:06.9465298Z 0.1.18
+2025-08-10T06:18:06.9624670Z ##[group]Run set -e
+2025-08-10T06:18:06.9624989Z [36;1mset -e[0m
+2025-08-10T06:18:06.9625204Z [36;1m[0m
+2025-08-10T06:18:06.9625435Z [36;1m# Unset GEMINI_API_KEY if empty[0m
+2025-08-10T06:18:06.9625747Z [36;1mif [ -z "${GEMINI_API_KEY}" ]; then[0m
+2025-08-10T06:18:06.9626056Z [36;1m  unset GEMINI_API_KEY[0m
+2025-08-10T06:18:06.9626316Z [36;1mfi[0m
+2025-08-10T06:18:06.9626527Z [36;1m[0m
+2025-08-10T06:18:06.9626812Z [36;1m# Run Gemini CLI with the provided prompt[0m
+2025-08-10T06:18:06.9627198Z [36;1mGEMINI_RESPONSE=$(gemini --yolo --prompt "${PROMPT}")[0m
+2025-08-10T06:18:06.9627555Z [36;1m[0m
+2025-08-10T06:18:06.9627869Z [36;1m# Set the captured response as a step output, supporting multiline[0m
+2025-08-10T06:18:06.9628293Z [36;1mecho "gemini_response<<EOF" >> "${GITHUB_OUTPUT}"[0m
+2025-08-10T06:18:06.9628675Z [36;1mecho "${GEMINI_RESPONSE}" >> "${GITHUB_OUTPUT}"[0m
+2025-08-10T06:18:06.9629008Z [36;1mecho "EOF" >> "${GITHUB_OUTPUT}"[0m
+2025-08-10T06:18:06.9629304Z [36;1mecho "${GEMINI_RESPONSE}"[0m
+2025-08-10T06:18:06.9669621Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2025-08-10T06:18:06.9670031Z env:
+2025-08-10T06:18:06.9670766Z   GEMINI_API_KEY: ***
+2025-08-10T06:18:06.9671040Z   SURFACE: GitHub
+2025-08-10T06:18:06.9671298Z   GOOGLE_CLOUD_PROJECT: 
+2025-08-10T06:18:06.9671570Z   GOOGLE_CLOUD_LOCATION: 
+2025-08-10T06:18:06.9671883Z   GOOGLE_GENAI_USE_VERTEXAI: false
+2025-08-10T06:18:06.9672203Z   GOOGLE_GENAI_USE_GCA: false
+2025-08-10T06:18:06.9672482Z   GOOGLE_CLOUD_ACCESS_TOKEN: 
+2025-08-10T06:18:06.9673188Z   PROMPT: あなたは優秀なプロジェクトマネージャーです。
+以下のGitHub issueの内容を分析してください。
+
+1.  まずissueの内容を簡潔に要約してください。
+2.  次にこのissueを解決するために必要な具体的なタスクを箇条書きでリストアップしてください。
+
+---
+**Issue Title: テスト用Issue**
+**Issue Body:**
+Github-Actionsのテスト
+
+
+2025-08-10T06:18:06.9673857Z ##[endgroup]
+2025-08-10T06:18:15.5330989Z はい、承知いたしました。以下にGitHub issueの分析結果をまとめます。
+2025-08-10T06:18:15.5331482Z 
+2025-08-10T06:18:15.5331623Z ### 1. Issueの要約
+2025-08-10T06:18:15.5331739Z 
+2025-08-10T06:18:15.5331995Z このIssueは、GitHub Actionsが正しく動作するかを確認するためのテストとして作成されました。
+2025-08-10T06:18:15.5332323Z 
+2025-08-10T06:18:15.5332501Z ### 2. 解決に向けたタスクリスト
+2025-08-10T06:18:15.5332685Z 
+2025-08-10T06:18:15.5333391Z *   GitHub Actionsのワークフロー定義ファイル（`.github/workflows/gemini-issue-processor.yml`）の内容を確認し、意図した処理が記述されているかレビューする。
+2025-08-10T06:18:15.5334284Z *   このIssue（テスト用Issue）を利用して、定義されたワークフローを実際にトリガー（実行）する。
+2025-08-10T06:18:15.5334992Z *   GitHubのActionsタブで、実行されたワークフローがすべてのステップで成功するか、あるいは意図通りに失敗するかを監視する。
+2025-08-10T06:18:15.5335629Z *   ワークフローの実行ログを確認し、エラーや警告が出ていないかチェックする。
+2025-08-10T06:18:15.5336092Z *   テストが完了したら、このIssueをクローズする。

@@ -1,0 +1,11 @@
+﻿2025-08-10T06:18:15.5388970Z ##[group]Run echo "--- Start Debug Info ---"
+2025-08-10T06:18:15.5389297Z [36;1mecho "--- Start Debug Info ---"[0m
+2025-08-10T06:18:15.5389634Z [36;1mecho "The following output should be passed to the next step:"[0m
+2025-08-10T06:18:15.5389952Z [36;1mecho ""[0m
+2025-08-10T06:18:15.5390330Z [36;1mecho "--- End Debug Info ---"[0m
+2025-08-10T06:18:15.5432759Z shell: /usr/bin/bash -e {0}
+2025-08-10T06:18:15.5432992Z ##[endgroup]
+2025-08-10T06:18:15.5486287Z --- Start Debug Info ---
+2025-08-10T06:18:15.5488225Z The following output should be passed to the next step:
+2025-08-10T06:18:15.5488590Z 
+2025-08-10T06:18:15.5488738Z --- End Debug Info ---
