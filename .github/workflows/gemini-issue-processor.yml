@@ -1,0 +1,63 @@
+name: Gemini Issue Processor
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'The number of the issue to process'
+        required: true
+
+permissions:
+  issues: write
+
+jobs:
+  process-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get issue data
+        id: get_issue
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issue = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: ${{ github.event.inputs.issue_number }}
+            });
+            return { title: issue.data.title, body: issue.data.body };
+          result-encoding: json
+
+      - name: Run Gemini CLI to process issue
+        id: gemini_process
+        uses: google-github-actions/run-gemini-cli@v1
+        with:
+          gemini-api-key: ${{ secrets.GEMINI_API_KEY }}
+          prompt: |
+            あなたは優秀なプロジェクトマネージャーです。
+            以下のGitHub issueの内容を分析してください。
+
+            1.  まずissueの内容を簡潔に要約してください。
+            2.  次にこのissueを解決するために必要な具体的なタスクを箇条書きでリストアップしてください。
+
+            ---
+            **Issue Title: ${{ fromJson(steps.get_issue.outputs.result).title }}**
+            **Issue Body:**
+            ${{ fromJson(steps.get_issue.outputs.result).body }}
+
+      - name: Comment on issue with Gemini's output
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: ${{ github.event.inputs.issue_number }},
+              body: `🤖 Geminiによる分析結果です：
+
+${{ steps.gemini_process.outputs.prompt-response }}`
+            });
