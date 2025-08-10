@@ -1,0 +1,1 @@
+This is a Next.js project, likely a web application. The README suggests it's a standard setup bootstrapped with `create-next-app`. The main goal is to build a web application using the Next.js framework.
