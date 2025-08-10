@@ -48,6 +48,13 @@ jobs:
             **Issue Body:**
             ${{ fromJson(steps.get_issue.outputs.result).body }}
 
+      - name: Debug Gemini Output
+        run: |
+          echo "--- Start Debug Info ---"
+          echo "The following output should be passed to the next step:"
+          echo "${{ steps.gemini_process.outputs.gemini_response }}"
+          echo "--- End Debug Info ---"
+
       - name: Comment on issue with Gemini's output
         uses: actions/github-script@v7
         env:
