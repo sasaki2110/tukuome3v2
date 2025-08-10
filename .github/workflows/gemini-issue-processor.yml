@@ -35,7 +35,7 @@ jobs:
         id: gemini_process
         uses: google-github-actions/run-gemini-cli@v0
         with:
-          gemini-api-key: ${{ secrets.GEMINI_API_KEY }}
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
           prompt: |
             あなたは優秀なプロジェクトマネージャーです。
             以下のGitHub issueの内容を分析してください。
