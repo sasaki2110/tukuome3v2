@@ -10,6 +10,12 @@ const nextConfig: NextConfig = {
          port: '',
          pathname: '/recipes/**',
        },
+       {
+         protocol: 'https',
+         hostname: 'img-global-jp.cpcdn.com',
+         port: '',
+         pathname: '/recipes/**',
+       },
      ],
    },
 };

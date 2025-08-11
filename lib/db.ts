@@ -1,5 +1,5 @@
 import { sql } from '@vercel/postgres';
-import { Repo, Auther, DispTag } from '@/app/model/model';
+import { Repo, Auther, DispTag, Tag } from '@/app/model/model';
 
 function getModeWhereClause(mode: string): string {
   switch (mode) {
@@ -299,6 +299,113 @@ export async function getDispTagsOptimized(userId: string, level: number, value:
   });
 
   return dispTags;
+}
+
+/**
+ * 指定されたパターンでタグを検索します。
+ * @param pattern 検索パターン
+ * @returns Tag型の配列
+ */
+export async function getTagsByNamePattern(pattern: string): Promise<Tag[]> {
+  const { rows } = await sql<Tag>`
+    SELECT id, name, dispname, level
+    FROM tag
+    WHERE name LIKE ${pattern}
+    ORDER BY level, id;
+  `;
+  return rows;
+}
+
+/**
+ * レシピをデータベースに挿入します。
+ * @param userId ユーザーID
+ * @param recipeData 挿入するレシピデータ
+ */
+export async function insertRecipe(
+  userId: string,
+  recipeData: {
+    id_n: number;
+    image: string;
+    title: string;
+    tsukurepo: string; // Will be converted to reposu_n
+    recipe_type: 'main_dish' | 'side_dish' | 'other';
+    tags: string[]; // Combined tags
+  }
+): Promise<void> {
+  const reposu_n = parseInt(recipeData.tsukurepo, 10) || 0; // Convert tsukurepo to number
+  const isMain = recipeData.recipe_type === 'main_dish' ? 1 : 0;
+  const isSub = recipeData.recipe_type === 'side_dish' ? 1 : 0;
+  const tagString = recipeData.tags.join(' '); // Join tags into a single string
+
+  await sql`
+    INSERT INTO repo (
+      userid,
+      id_n,
+      image,
+      title,
+      rank,
+      reposu_n,
+      comment,
+      tag,
+      ismain,
+      issub
+    ) VALUES (
+      ${userId},
+      ${recipeData.id_n},
+      ${recipeData.image},
+      ${recipeData.title},
+      0, -- Default rank to 0
+      ${reposu_n},
+      '', -- Default comment to empty string
+      ${tagString},
+      ${isMain},
+      ${isSub}
+    );
+  `;
+}
+
+/**
+ * レシピをデータベースから削除します。
+ * @param userId ユーザーID
+ * @param id_n レシピID
+ */
+export async function deleteRecipe(userId: string, id_n: number): Promise<void> {
+  await sql`
+    DELETE FROM repo WHERE userid = ${userId} AND id_n = ${id_n};
+  `;
+}
+
+/**
+ * レシピをデータベースで更新します。
+ * @param userId ユーザーID
+ * @param recipeData 更新するレシピデータ
+ */
+export async function updateRecipe(
+  userId: string,
+  recipeData: {
+    id_n: number;
+    image: string;
+    title: string;
+    tsukurepo: string; // Will be converted to reposu_n
+    recipe_type: 'main_dish' | 'side_dish' | 'other';
+    tags: string[]; // Combined tags
+  }
+): Promise<void> {
+  const reposu_n = parseInt(recipeData.tsukurepo, 10) || 0;
+  const isMain = recipeData.recipe_type === 'main_dish' ? 1 : 0;
+  const isSub = recipeData.recipe_type === 'side_dish' ? 1 : 0;
+  const tagString = recipeData.tags.join(' ');
+
+  await sql`
+    UPDATE repo SET
+      image = ${recipeData.image},
+      title = ${recipeData.title},
+      reposu_n = ${reposu_n},
+      tag = ${tagString},
+      ismain = ${isMain},
+      issub = ${isSub}
+    WHERE userid = ${userId} AND id_n = ${recipeData.id_n};
+  `;
 }
 
 // フォルダー関連のDB操作

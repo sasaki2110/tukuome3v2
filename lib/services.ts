@@ -1,7 +1,7 @@
 'use server';
 
-import { getRepos, getReposByTitle, getReposByTag, getRepoById, updateLikeStatus, updateComment, getAuthers, getDispTagsOptimized, getReposByFolder } from './db';
-import { Repo, Auther, DispTag } from '@/app/model/model';
+import { getRepos, getReposByTitle, getReposByTag, getRepoById, updateLikeStatus, updateComment, getAuthers, getDispTagsOptimized, getReposByFolder, getTagsByNamePattern, insertRecipe, deleteRecipe as deleteRecipeDb, updateRecipe as updateRecipeDb } from './db';
+import { Repo, Auther, DispTag, Tag } from '@/app/model/model';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
@@ -148,6 +148,16 @@ export async function fetchAuthers(offset: number, limit: number): Promise<{ aut
 }
 
 /**
+ * 指定されたパターンでタグを検索します。
+ * @param pattern 検索パターン (例: '素材別%')
+ * @returns Tag型の配列
+ */
+export async function getTagsByName(pattern: string): Promise<Tag[]> {
+  // userId is not needed for getTagsByNamePattern as the tag table is shared
+  return await getTagsByNamePattern(pattern);
+}
+
+/**
  * 指定されたレベルと親タグのnameに基づいて表示用タグを取得します。
  * @param level 取得するタグのレベル
  * @param value 親タグのname (最上位の場合は空文字列)
@@ -156,6 +166,51 @@ export async function fetchAuthers(offset: number, limit: number): Promise<{ aut
 export async function getDispTags(level: number, value: string): Promise<DispTag[]> {
   const userId = await getUserIdFromSession();
   return await getDispTagsOptimized(userId, level, value);
+}
+
+/**
+ * レシピをデータベースに追加します。
+ * @param recipeData 追加するレシピデータ
+ */
+export async function addRecipe(
+  recipeData: {
+    id_n: number;
+    image: string;
+    title: string;
+    tsukurepo: string;
+    recipe_type: 'main_dish' | 'side_dish' | 'other';
+    tags: string[];
+  }
+): Promise<void> {
+  const userId = await getUserIdFromSession();
+  await insertRecipe(userId, recipeData);
+}
+
+/**
+ * レシピをデータベースから削除します。
+ * @param id_n レシピID
+ */
+export async function deleteRecipe(id_n: number): Promise<void> {
+  const userId = await getUserIdFromSession();
+  await deleteRecipeDb(userId, id_n);
+}
+
+/**
+ * レシピをデータベースで更新します。
+ * @param recipeData 更新するレシピデータ
+ */
+export async function updateRecipe(
+  recipeData: {
+    id_n: number;
+    image: string;
+    title: string;
+    tsukurepo: string;
+    recipe_type: 'main_dish' | 'side_dish' | 'other';
+    tags: string[];
+  }
+): Promise<void> {
+  const userId = await getUserIdFromSession();
+  await updateRecipeDb(userId, recipeData);
 }
 
 // フォルダー関連のサーバーアクション

@@ -33,6 +33,7 @@ export default function NavBar() {
           <div className="flex items-center">
             <div className="hidden md:block ">
               <ul className="flex flex-col md:flex-row justify-center md:justify-end items-end">
+                <Link href="/recipes/new" className="block px-2 py-2 text-center">レシピ追加</Link>
                 <Link href="/recipes/tags" className="block px-2 py-2 text-center">タグ検索</Link>
                 <Link href="/recipes/folders" className="block px-2 py-2 text-center">フォルダ</Link>
                 <Link href="/recipes/Authers" className="block px-2 py-2 text-center">作者一覧</Link>
@@ -50,6 +51,7 @@ export default function NavBar() {
         </div>
         <div className={isOpen?"block":"hidden"}>
           <ul className="flex flex-col md:flex-row justify-center md:justify-end items-center">
+            <Link href="/recipes/new" onClick={()=> {setIsOpen(!isOpen)}} className="block px-2 py-2 text-center">レシピ追加</Link>
             <Link href="/recipes/tags" onClick={()=> {setIsOpen(!isOpen)}} className="block px-2 py-2 text-center">タグ検索</Link>
             <Link href="/recipes/folders" onClick={()=> {setIsOpen(!isOpen)}} className="block px-2 py-2 text-center">フォルダ</Link>
             <Link href="/recipes/Authers" onClick={()=> {setIsOpen(!isOpen)}} className="block px-2 py-2 text-center">作者一覧</Link>
