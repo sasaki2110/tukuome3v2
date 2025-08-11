@@ -120,7 +120,7 @@ const TagAccordionNode: React.FC<TagAccordionNodeProps> = ({ node, selectedTags,
 
 export default function TagSelectionGroup({ pattern, onSelectionChange, suggestedTagNames, componentKey }: TagSelectionGroupProps) {
   console.log(`TagSelectionGroup: pattern=${pattern}, componentKey=${componentKey}, suggestedTagNames=`, suggestedTagNames);
-  const [tags, setTags] = useState<Tag[]>([]);
+  const [allTags, setAllTags] = useState<Tag[]>([]);
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const [tagTree, setTagTree] = useState<TagNode[]>([]);
 
@@ -141,42 +141,46 @@ export default function TagSelectionGroup({ pattern, onSelectionChange, suggeste
   useEffect(() => {
     async function fetchAndProcessTags() {
       const fetchedTags = await getTagsByName(pattern);
-      setTags(fetchedTags);
+      setAllTags(fetchedTags);
       console.log(`TagSelectionGroup (${pattern}): fetchedTags=`, fetchedTags);
 
       const tree = buildTagTree(fetchedTags, pattern);
       setTagTree(tree);
       console.log(`TagSelectionGroup (${pattern}): tagTree=`, tree);
-
-      // Create a flat list of all selectable tag names from the built tree
-      const allSelectableTagNames: string[] = [];
-      const traverseAndCollectSelectable = (nodes: TagNode[]) => {
-        nodes.forEach(node => {
-          if (node.isSelectable) {
-            allSelectableTagNames.push(node.name);
-          } else {
-            traverseAndCollectSelectable(node.children);
-          }
-        });
-      };
-      traverseAndCollectSelectable(tree);
-
-      // Pre-select tags based on suggestions, ensuring they are selectable leaf nodes
-      if (suggestedTagNames && suggestedTagNames.length > 0) {
-        const suggested = fetchedTags.filter(t =>
-          suggestedTagNames.includes(t.name) && allSelectableTagNames.includes(t.name)
-        );
-        setSelectedTags(suggested);
-        onSelectionChange(suggested);
-        console.log(`TagSelectionGroup (${pattern}): pre-selected tags=`, suggested);
-      } else {
-        setSelectedTags([]); // Clear selection if no suggestions
-        onSelectionChange([]);
-        console.log(`TagSelectionGroup (${pattern}): No suggestions or empty, clearing selection.`);
-      }
     }
     fetchAndProcessTags();
-  }, [pattern, componentKey, suggestedTagNames, onSelectionChange]); // Added suggestedTagNames and onSelectionChange to dependencies
+  }, [pattern, componentKey]);
+
+  useEffect(() => {
+    if (allTags.length === 0) return;
+
+    // Create a flat list of all selectable tag names from the built tree
+    const allSelectableTagNames: string[] = [];
+    const traverseAndCollectSelectable = (nodes: TagNode[]) => {
+      nodes.forEach(node => {
+        if (node.isSelectable) {
+          allSelectableTagNames.push(node.name);
+        } else {
+          traverseAndCollectSelectable(node.children);
+        }
+      });
+    };
+    traverseAndCollectSelectable(tagTree);
+
+    // Pre-select tags based on suggestions, ensuring they are selectable leaf nodes
+    if (suggestedTagNames && suggestedTagNames.length > 0) {
+      const suggested = allTags.filter(t =>
+        suggestedTagNames.includes(t.name) && allSelectableTagNames.includes(t.name)
+      );
+      setSelectedTags(suggested);
+      onSelectionChange(suggested);
+      console.log(`TagSelectionGroup (${pattern}): pre-selected tags=`, suggested);
+    } else {
+      setSelectedTags([]); // Clear selection if no suggestions
+      onSelectionChange([]);
+      console.log(`TagSelectionGroup (${pattern}): No suggestions or empty, clearing selection.`);
+    }
+  }, [suggestedTagNames, allTags, tagTree, onSelectionChange, pattern]);
 
 
   return (

@@ -86,11 +86,25 @@ export async function getAllSelectableTagNames(): Promise<string[]> {
   return selectableNames;
 }
 
+interface SerializableText {
+  type: 'text';
+  content: string;
+}
+
+interface SerializableElement {
+  type: 'tag';
+  tag: string;
+  attributes?: { [key: string]: string };
+  children?: (SerializableElement | SerializableText)[];
+}
+
+type SerializableNode = SerializableElement | SerializableText | null;
+
 // Helper function to convert the custom DOM object to a flat text string
-function domToText(node: any): string {
+function domToText(node: SerializableNode): string {
   if (!node) return '';
   if (node.type === 'text') return node.content || '';
-  if (node.children) {
+  if (node.type === 'tag' && node.children) {
     return node.children.map(domToText).join(' ');
   }
   return '';

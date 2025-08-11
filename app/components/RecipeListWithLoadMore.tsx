@@ -30,7 +30,7 @@ export function RecipeListWithLoadMore({
   searchRank,
 }: RecipeListWithLoadMoreProps) {
   const [recipes, setRecipes] = useState<Repo[]>(initialRecipes);
-  const [_isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
   const [optimisticRecipes, setOptimisticRecipes] = useOptimistic(
     recipes,
     (state, { recipeId, newRank, newComment }: { recipeId: number; newRank?: number; newComment?: string }) => {

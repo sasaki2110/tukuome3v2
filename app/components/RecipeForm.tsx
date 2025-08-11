@@ -1,19 +1,20 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import TagSelectionGroup from './TagSelectionGroup';
 import { Tag } from '@/app/model/model';
 import { getRecipeDetailsFromUrl, RecipeDetails } from '@/app/recipes/new/actions';
-import { addRecipe, getRecipeById, deleteRecipe, updateRecipe } from '@/lib/services'; // Import addRecipe, getRecipeById, deleteRecipe, updateRecipe
+import { reScrapeRecipe } from '@/app/recipes/edit/actions';
+import { addRecipe, getRecipeById, deleteRecipe, updateRecipe } from '@/lib/services';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation'; // Import useRouter
+import { useRouter } from 'next/navigation';
 
 interface RecipeFormProps {
-  recipeId?: string; // Optional for new recipe mode
-  isEditMode?: boolean; // Optional, defaults to false for new recipe mode
+  recipeId?: string;
+  isEditMode?: boolean;
 }
 
 export default function RecipeForm({ recipeId, isEditMode = false }: RecipeFormProps) {
@@ -25,7 +26,8 @@ export default function RecipeForm({ recipeId, isEditMode = false }: RecipeFormP
   const [recipeType, setRecipeType] = useState<'main_dish' | 'side_dish' | 'other'>('other');
   const [isPending, startTransition] = useTransition();
   const [isAdding, startAddingTransition] = useTransition();
-  const [initialLoad, setInitialLoad] = useState(true); // To prevent re-fetching on every render
+  const [isReloading, startReloadingTransition] = useTransition();
+  const [initialLoad, setInitialLoad] = useState(true);
 
   useEffect(() => {
     if (isEditMode && recipeId && initialLoad) {
@@ -34,27 +36,25 @@ export default function RecipeForm({ recipeId, isEditMode = false }: RecipeFormP
           const { recipes } = await getRecipeById(parseInt(recipeId, 10));
           if (recipes.length > 0) {
             const recipe = recipes[0];
-            setRecipeNumber(recipe.id_n.toString()); // Set recipe number from DB
-            // Manually construct RecipeDetails from DB data for initial display
+            setRecipeNumber(recipe.id_n.toString());
             setRecipeDetails({
               scrapedInfo: {
                 title: recipe.title,
                 image: recipe.image,
-                tsukurepo: recipe.tsukurepo.toString(), // Assuming tsukurepo is number in DB
-                author: recipe.author || '', // Assuming author might be missing in old data
+                tsukurepo: recipe.reposu_n?.toString() || '0',
+                author: recipe.author || '',
               },
               llmOutput: {
                 recipe_type: recipe.recipe_type,
-                main_ingredients: recipe.tags.filter(tag => tag.startsWith('素材別')),
-                categories: recipe.tags.filter(tag => tag.startsWith('料理')),
+                main_ingredients: recipe.tags?.filter(tag => tag.startsWith('素材別')) || [],
+                categories: recipe.tags?.filter(tag => tag.startsWith('料理')) || [],
               },
             });
             setRecipeType(recipe.recipe_type);
-            setSelectedMainTags(recipe.tags.filter(tag => tag.startsWith('素材別')).map(name => ({ id: 0, name, dispname: name.replace(/^(素材別|料理)/, '') }))); // Dummy ID for now
-            setSelectedCategoryTags(recipe.tags.filter(tag => tag.startsWith('料理')).map(name => ({ id: 0, name, dispname: name.replace(/^(素材別|料理)/, '') }))); // Dummy ID for now
+            setSelectedMainTags(recipe.tags?.filter(tag => tag.startsWith('素材別')).map(name => ({ id: 0, name, dispname: name.replace(/^(素材別|料理)/, ''), level: 0 })) || []);
+            setSelectedCategoryTags(recipe.tags?.filter(tag => tag.startsWith('料理')).map(name => ({ id: 0, name, dispname: name.replace(/^(素材別|料理)/, ''), level: 0 })) || []);
           } else {
             alert('指定されたレシピが見つかりませんでした。');
-            // Optionally redirect or clear form
           }
         } catch (error) {
           console.error('Failed to fetch recipe for edit:', error);
@@ -65,10 +65,9 @@ export default function RecipeForm({ recipeId, isEditMode = false }: RecipeFormP
       };
       fetchAndSetRecipe();
     } else if (!isEditMode) {
-      // For new recipe mode, ensure initialLoad is false after first render
       setInitialLoad(false);
     }
-  }, [isEditMode, recipeId, initialLoad]); // Add initialLoad to dependencies
+  }, [isEditMode, recipeId, initialLoad]);
 
   const handleFetchRecipe = () => {
     startTransition(async () => {
@@ -83,6 +82,23 @@ export default function RecipeForm({ recipeId, isEditMode = false }: RecipeFormP
     });
   };
 
+  const handleReloadRecipe = () => {
+    startReloadingTransition(async () => {
+      const scrapedInfo = await reScrapeRecipe(recipeNumber);
+      if (scrapedInfo) {
+        setRecipeDetails(prevDetails => {
+          if (prevDetails) {
+            return { ...prevDetails, scrapedInfo };
+          }
+          return null;
+        });
+        alert('レシピ情報を再読み込みしました。');
+      } else {
+        alert('レシピ情報の再読み込みに失敗しました。');
+      }
+    });
+  };
+
   const handleSubmitRecipe = () => {
     if (!recipeDetails || !scrapedInfo) {
       alert('レシピ情報を取得してください。');
@@ -90,16 +106,14 @@ export default function RecipeForm({ recipeId, isEditMode = false }: RecipeFormP
     }
 
     startAddingTransition(async () => {
-      // 既存チェック
       const existingRecipe = await getRecipeById(parseInt(recipeNumber, 10));
       if (existingRecipe.recipes.length > 0) {
         alert('指定のレシピ番号は既に登録されています。');
-        return; // 処理を中断
+        return;
       }
 
-      // 確認ダイアログ
       if (!confirm('レシピを登録します。よろしいですか？')) {
-        return; // キャンセルされた場合は処理を中断
+        return;
       }
 
       try {
@@ -109,10 +123,10 @@ export default function RecipeForm({ recipeId, isEditMode = false }: RecipeFormP
           title: `${scrapedInfo.title}${scrapedInfo.author ? ' by ' + scrapedInfo.author : ''}`,
           tsukurepo: scrapedInfo.tsukurepo,
           recipe_type: recipeType,
-          tags: allSelectedTags.map(tag => tag.name), // Use tag.name for DB
+          tags: allSelectedTags.map(tag => tag.name),
         });
         alert('レシピが追加されました！');
-        router.push(`/recipes?title=${recipeNumber}`); // Redirect to recipe list with search query
+        router.push(`/recipes?title=${recipeNumber}`);
       } catch (error) {
         console.error('Failed to add recipe:', error);
         alert('レシピの追加に失敗しました。');
@@ -130,11 +144,11 @@ export default function RecipeForm({ recipeId, isEditMode = false }: RecipeFormP
       return;
     }
 
-    startAddingTransition(async () => { // Re-using isAdding state for delete
+    startAddingTransition(async () => {
       try {
         await deleteRecipe(parseInt(recipeNumber, 10));
         alert('レシピが削除されました。');
-        router.push('/recipes'); // 削除後はレシピ一覧にリダイレクト
+        router.push('/recipes');
       } catch (error) {
         console.error('Failed to delete recipe:', error);
         alert('レシピの削除に失敗しました。');
@@ -152,7 +166,7 @@ export default function RecipeForm({ recipeId, isEditMode = false }: RecipeFormP
       return;
     }
 
-    startAddingTransition(async () => { // Re-using isAdding state for update
+    startAddingTransition(async () => {
       try {
         await updateRecipe({
           id_n: parseInt(recipeNumber, 10),
@@ -163,7 +177,7 @@ export default function RecipeForm({ recipeId, isEditMode = false }: RecipeFormP
           tags: allSelectedTags.map(tag => tag.name),
         });
         alert('レシピが更新されました！');
-        router.push(`/recipes?title=${recipeNumber}`); // 更新後はそのレシピを表示
+        router.push(`/recipes?title=${recipeNumber}`);
       } catch (error) {
         console.error('Failed to update recipe:', error);
         alert('レシピの更新に失敗しました。');
@@ -186,11 +200,16 @@ export default function RecipeForm({ recipeId, isEditMode = false }: RecipeFormP
               className="max-w-xs"
               value={recipeNumber}
               onChange={(e) => setRecipeNumber(e.target.value)}
-              disabled={isEditMode} // Disable input in edit mode
+              disabled={isEditMode}
             />
-            {!isEditMode && ( // Only show fetch button in new mode
+            {!isEditMode && (
               <Button onClick={handleFetchRecipe} disabled={isPending}>
                 {isPending ? '取得中...' : '取得'}
+              </Button>
+            )}
+            {isEditMode && (
+              <Button onClick={handleReloadRecipe} disabled={isReloading}>
+                {isReloading ? '再読込中...' : '再読み込み'}
               </Button>
             )}
           </div>
@@ -204,7 +223,7 @@ export default function RecipeForm({ recipeId, isEditMode = false }: RecipeFormP
             <label className="block text-sm font-medium">画像</label>
             <div className="p-2 border rounded-md bg-gray-100 h-40 relative">
               {scrapedInfo?.image && (
-                <Image src={scrapedInfo.image} alt={scrapedInfo.title} layout="fill" objectFit="cover" />
+                <Image src={scrapedInfo.image} alt={scrapedInfo.title || ''} layout="fill" objectFit="cover" />
               )}
             </div>
           </div>
@@ -239,8 +258,8 @@ export default function RecipeForm({ recipeId, isEditMode = false }: RecipeFormP
             <label className="block text-sm font-medium">選択中のタグ</label>
             <div className="p-2 border rounded-md bg-gray-100 min-h-[4rem] flex flex-wrap gap-2">
               {allSelectedTags.map(tag => (
-                <span key={tag.id} className="bg-gray-200 text-gray-800 px-2 py-1 rounded-full text-sm">
-                  {tag.name} {/* Changed from tag.dispname to tag.name */}
+                <span key={tag.name} className="bg-gray-200 text-gray-800 px-2 py-1 rounded-full text-sm">
+                  {tag.name}
                 </span>
               ))}
             </div>
@@ -252,7 +271,7 @@ export default function RecipeForm({ recipeId, isEditMode = false }: RecipeFormP
           <h2 className="text-lg font-semibold">主材料</h2>
           <div className="p-2 border rounded-md h-full">
             <TagSelectionGroup
-              componentKey={`main-${recipeNumber}`} // Renamed from key
+              componentKey={`main-${recipeNumber}`}
               pattern="素材別%"
               onSelectionChange={setSelectedMainTags}
               suggestedTagNames={recipeDetails?.llmOutput.main_ingredients}
@@ -265,7 +284,7 @@ export default function RecipeForm({ recipeId, isEditMode = false }: RecipeFormP
           <h2 className="text-lg font-semibold">カテゴリ</h2>
           <div className="p-2 border rounded-md h-full">
             <TagSelectionGroup
-              componentKey={`cat-${recipeNumber}`} // Renamed from key
+              componentKey={`cat-${recipeNumber}`}
               pattern="料理%"
               onSelectionChange={setSelectedCategoryTags}
               suggestedTagNames={recipeDetails?.llmOutput.categories}

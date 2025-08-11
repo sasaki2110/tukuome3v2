@@ -1,7 +1,20 @@
 import * as cheerio from 'cheerio';
 
-// @ts-ignore
-function domToSerializable(element: cheerio.Element): any {
+interface SerializableText {
+  type: 'text';
+  content: string;
+}
+
+interface SerializableElement {
+  type: 'tag';
+  tag: string;
+  attributes?: { [key: string]: string };
+  children?: (SerializableElement | SerializableText)[];
+}
+
+type SerializableNode = SerializableElement | SerializableText | null;
+
+function domToSerializable(element: cheerio.Element): SerializableNode {
   if (element.type === 'text') {
     const textContent = element.data?.trim();
     if (!textContent) return null;
@@ -10,9 +23,8 @@ function domToSerializable(element: cheerio.Element): any {
 
   if (element.type === 'tag') {
     const children = element.children
-      // @ts-ignore
       .map((child: cheerio.Element) => domToSerializable(child))
-      .filter(child => child !== null);
+      .filter(child => child !== null) as (SerializableElement | SerializableText)[];
 
     const attributes = element.attribs;
     const hasAttributes = Object.keys(attributes).length > 0;
@@ -35,28 +47,28 @@ export interface RecipeInfo {
   author: string;
 }
 
-function extractRecipeInfo(dom: any): RecipeInfo {
+function extractRecipeInfo(dom: SerializableNode): RecipeInfo {
   let title = '';
   let tsukurepo = '';
   let image = '';
   let author = '';
 
-  const findText = (node: any): string => {
+  const findText = (node: SerializableNode): string => {
     if (!node) return '';
     if (node.type === 'text') return node.content || '';
-    if (node.children) {
+    if (node.type ==='tag' && node.children) {
       return node.children.map(findText).join('');
     }
     return '';
   };
 
-  const traverse = (node: any) => {
+  const traverse = (node: SerializableNode) => {
     if (!node) return;
 
     if (node.type === 'tag') {
       // 1. タイトル
       if (node.attributes?.id === 'header--recipe-title') {
-        const firstDiv = node.children?.find((child: any) => child.tag === 'div');
+        const firstDiv = node.children?.find((child) => (child as SerializableElement).tag === 'div');
         if (firstDiv) {
           title = findText(firstDiv);
         }
@@ -69,9 +81,9 @@ function extractRecipeInfo(dom: any): RecipeInfo {
 
       // 3. イメージ
       if (node.tag === 'picture' && !image) {
-        const img = node.children?.find((child: any) => child.tag === 'img');
-        if (img?.attributes?.src) {
-          image = img.attributes.src;
+        const img = node.children?.find((child) => (child as SerializableElement).tag === 'img');
+        if (img && (img as SerializableElement).attributes?.src) {
+          image = (img as SerializableElement).attributes!.src!;
         }
       }
       
@@ -83,7 +95,7 @@ function extractRecipeInfo(dom: any): RecipeInfo {
       }
     }
 
-    if (node.children) {
+    if (node.type === 'tag' && node.children) {
       node.children.forEach(traverse);
     }
   };

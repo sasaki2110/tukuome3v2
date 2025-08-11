@@ -1,5 +1,5 @@
 import { sql } from '@vercel/postgres';
-import { Repo, Auther, DispTag, Tag } from '@/app/model/model';
+import { Repo, Auther, DispTag, Tag, RawRepo } from '@/app/model/model';
 
 function getModeWhereClause(mode: string): string {
   switch (mode) {
@@ -24,6 +24,13 @@ function getRankWhereClause(rank: string): string {
     default:
       return '';
   }
+}
+
+function processRepoRows(rows: RawRepo[]): Repo[] {
+  return rows.map(row => ({
+    ...row,
+    tags: row.tag ? row.tag.split(' ') : [],
+  }));
 }
 
 /**
@@ -52,7 +59,7 @@ export async function getRepos(userId: string, limit: number, offset: number, mo
 
   const hasMore = rows.length === limit;
 
-  return { repos: rows as Repo[], hasMore };
+  return { repos: processRepoRows(rows as RawRepo[]), hasMore };
 }
 
 /**
@@ -84,7 +91,7 @@ export async function getReposByTitle(userId: string, searchTerm: string, limit:
 
   const hasMore = rows.length === limit;
 
-  return { repos: rows as Repo[], hasMore };
+  return { repos: processRepoRows(rows as RawRepo[]), hasMore };
 }
 
 /**
@@ -117,7 +124,7 @@ export async function getReposByTag(userId: string, tagName: string, limit: numb
 
   const hasMore = rows.length === limit;
 
-  return { repos: rows as Repo[], hasMore };
+  return { repos: processRepoRows(rows as RawRepo[]), hasMore };
 }
 
 /**
@@ -153,7 +160,7 @@ export async function getReposByFolder(userId: string, folderName: string, limit
 
   const hasMore = rows.length === limit;
 
-  return { repos: rows as Repo[], hasMore };
+  return { repos: processRepoRows(rows as RawRepo[]), hasMore };
 }
 
 /**
@@ -176,7 +183,7 @@ export async function getRepoById(userId: string, recipeId: number): Promise<{ r
   `;
   const { rows } = await sql.query(query, [userId, recipeId]);
 
-  return { repos: rows as Repo[], hasMore: false };
+  return { repos: processRepoRows(rows as RawRepo[]), hasMore: false };
 }
 
 /**

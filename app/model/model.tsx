@@ -1,6 +1,23 @@
 // クエリー結果の型宣言
 
-// レシピ型（DB型）
+// レシピ型（DBから取得した生データ）
+export type RawRepo = {
+    userid: string,
+    id_n: number,
+    image: string,
+    title: string,
+    rank: number,
+    reposu_n: number,
+    comment: string,
+    tag: string,
+    ismain: number,
+    issub: number,
+    foldered?: boolean,
+    author?: string,
+    recipe_type: 'main_dish' | 'side_dish' | 'other',
+}
+
+// レシピ型（アプリケーションで使う型）
 export type Repo = {
     userid: string,
     id_n: number,
@@ -9,10 +26,12 @@ export type Repo = {
     rank: number,   // = 1 がいいね
     reposu_n: number,
     comment: string,
-    tag: string,
+    tags: string[],
+    recipe_type: 'main_dish' | 'side_dish' | 'other',
     ismain: number, // = 9 が既読
     issub: number,  // 未使用
     foldered?: boolean, // フォルダーに登録済みかどうか
+    author?: string, // Add author to the type
 }
 
 // タグ型（DB型）

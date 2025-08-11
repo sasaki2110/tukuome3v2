@@ -4,6 +4,8 @@ import { CommentDialog } from './CommentDialog'; // CommentDialogをインポー
 import { useState } from 'react'; // useStateをインポート
 import { Star, Heart, MessageSquare } from 'lucide-react'; // Star, Heart, MessageSquareをインポート
 import LikeDialog from './LikeDialog'; // LikeDialogをインポート
+import Link from 'next/link'; // 追加
+
 
 type RecipeCardProps = {
   recipe: Repo;
@@ -72,9 +74,11 @@ const RecipeCard = ({ recipe, onRankChange, onCommentSubmit, onFolderClick }: Re
       {/* 操作アイコンエリア */}
       <div className="p-3 flex justify-around items-center text-xl mt-auto border-t">
         {/* つくれぽ数 */}
-        <p className="text-sm text-gray-600">
-          {formatLikes(recipe.reposu_n)}
-        </p>
+        <Link href={`/recipes/edit?id=${recipe.id_n}`} passHref>
+          <p className="text-sm text-gray-600 cursor-pointer hover:underline"> {/* Add cursor-pointer and hover:underline for visual feedback */}
+            {formatLikes(recipe.reposu_n)}
+          </p>
+        </Link>
 
         {/* いいねボタン */}
         <button
