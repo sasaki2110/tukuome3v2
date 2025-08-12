@@ -39,7 +39,7 @@ function processRepoRows(rows: RawRepo[]): Repo[] {
  * @param offset スキップするレシピの件数
  * @returns Repo型の配列と、まだ取得できるレシピがあるかを示すhasMoreフラグ
  */
-export async function getRepos(userId: string, limit: number, offset: number, mode: string, rank: string): Promise<{ repos: Repo[], hasMore: boolean }> {
+export async function getRepos(userId: string, limit: number, offset: number, mode: string, rank: string, sort: string): Promise<{ repos: Repo[], hasMore: boolean }> {
   const modeWhereClause = getModeWhereClause(mode);
   const rankWhereClause = getRankWhereClause(rank);
   const query = `
@@ -52,7 +52,7 @@ export async function getRepos(userId: string, limit: number, offset: number, mo
       ) as foldered
     FROM repo
     WHERE userid = $1 ${modeWhereClause} ${rankWhereClause}
-    ORDER BY reposu_n DESC, id_n DESC
+    ORDER BY reposu_n ${sort}, id_n DESC
     LIMIT $2 OFFSET $3;
   `;
   const { rows } = await sql.query(query, [userId, limit, offset]);
@@ -70,7 +70,7 @@ export async function getRepos(userId: string, limit: number, offset: number, mo
  * @param offset スキップするレシピの件数
  * @returns Repo型の配列と、まだ取得できるレシピがあるかを示すhasMoreフラグ
  */
-export async function getReposByTitle(userId: string, searchTerm: string, limit: number, offset: number, mode: string, rank: string): Promise<{ repos: Repo[], hasMore: boolean }> {
+export async function getReposByTitle(userId: string, searchTerm: string, limit: number, offset: number, mode: string, rank: string, sort: string): Promise<{ repos: Repo[], hasMore: boolean }> {
   const str = "%" + searchTerm + "%";
   const modeWhereClause = getModeWhereClause(mode);
   const rankWhereClause = getRankWhereClause(rank);
@@ -84,7 +84,7 @@ export async function getReposByTitle(userId: string, searchTerm: string, limit:
       ) as foldered
     FROM repo
     WHERE userid = $1 AND title LIKE $2 ${modeWhereClause} ${rankWhereClause}
-    ORDER BY reposu_n DESC, id_n DESC
+    ORDER BY reposu_n ${sort}, id_n DESC
     LIMIT $3 OFFSET $4;
   `;
   const { rows } = await sql.query(query, [userId, str, limit, offset]);
@@ -103,7 +103,7 @@ export async function getReposByTitle(userId: string, searchTerm: string, limit:
  * @param mode 絞り込みモード
  * @returns Repo型の配列と、まだ取得できるレシピがあるかを示すhasMoreフラグ
  */
-export async function getReposByTag(userId: string, tagName: string, limit: number, offset: number, mode: string, rank: string): Promise<{ repos: Repo[], hasMore: boolean }> {
+export async function getReposByTag(userId: string, tagName: string, limit: number, offset: number, mode: string, rank: string, sort: string): Promise<{ repos: Repo[], hasMore: boolean }> {
   const str = "%" + tagName + "%";
   const modeWhereClause = getModeWhereClause(mode);
   const rankWhereClause = getRankWhereClause(rank);
@@ -117,7 +117,7 @@ export async function getReposByTag(userId: string, tagName: string, limit: numb
       ) as foldered
     FROM repo
     WHERE userid = $1 AND tag LIKE $2 ${modeWhereClause} ${rankWhereClause}
-    ORDER BY reposu_n DESC, id_n DESC
+    ORDER BY reposu_n ${sort}, id_n DESC
     LIMIT $3 OFFSET $4;
   `;
   const { rows } = await sql.query(query, [userId, str, limit, offset]);
@@ -136,7 +136,7 @@ export async function getReposByTag(userId: string, tagName: string, limit: numb
  * @param mode 絞り込みモード
  * @returns Repo型の配列と、まだ取得できるレシピがあるかを示すhasMoreフラグ
  */
-export async function getReposByFolder(userId: string, folderName: string, limit: number, offset: number, mode: string, rank: string): Promise<{ repos: Repo[], hasMore: boolean }> {
+export async function getReposByFolder(userId: string, folderName: string, limit: number, offset: number, mode: string, rank: string, sort: string): Promise<{ repos: Repo[], hasMore: boolean }> {
   const modeWhereClause = getModeWhereClause(mode);
   const rankWhereClause = getRankWhereClause(rank);
   const query = `
@@ -153,7 +153,7 @@ export async function getReposByFolder(userId: string, folderName: string, limit
       AND f.foldername = $2
       AND r.id_n::text = ANY(string_to_array(f.idofrepos, ' '))
       ${modeWhereClause} ${rankWhereClause}
-    ORDER BY r.reposu_n DESC, r.id_n DESC
+    ORDER BY r.reposu_n ${sort}, r.id_n DESC
     LIMIT $3 OFFSET $4;
   `;
   const { rows } = await sql.query(query, [userId, folderName, limit, offset]);

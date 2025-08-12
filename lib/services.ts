@@ -25,10 +25,10 @@ async function getUserIdFromSession(): Promise<string> {
  * @param limit 取得するレシピの最大件数
  * @returns Repo型の配列と、まだ取得できるレシピがあるかを示すhasMoreフラグ
  */
-export async function getRecipes(offset: number, limit: number, mode: string, rank: string): Promise<{ recipes: Repo[], hasMore: boolean }> {
+export async function getRecipes(offset: number, limit: number, mode: string, rank: string, sort: string): Promise<{ recipes: Repo[], hasMore: boolean }> { // sortを追加
   const userId = await getUserIdFromSession();
 
-  const { repos, hasMore } = await getRepos(userId, limit, offset, mode, rank);
+  const { repos, hasMore } = await getRepos(userId, limit, offset, mode, rank, sort); // sortを追加
   return { recipes: repos, hasMore };
 }
 
@@ -39,10 +39,10 @@ export async function getRecipes(offset: number, limit: number, mode: string, ra
  * @param limit 取得するレシピの最大件数
  * @returns Repo型の配列と、まだ取得できるレシピがあるかを示すhasMoreフラグ
  */
-export async function getRecipesByTitle(searchTerm: string, offset: number, limit: number, mode: string, rank: string): Promise<{ recipes: Repo[], hasMore: boolean }> {
+export async function getRecipesByTitle(searchTerm: string, offset: number, limit: number, mode: string, rank: string, sort: string): Promise<{ recipes: Repo[], hasMore: boolean }> { // sortを追加
   const userId = await getUserIdFromSession();
 
-  const { repos, hasMore } = await getReposByTitle(userId, searchTerm, limit, offset, mode, rank);
+  const { repos, hasMore } = await getReposByTitle(userId, searchTerm, limit, offset, mode, rank, sort); // sortを追加
   return { recipes: repos, hasMore };
 }
 
@@ -54,10 +54,10 @@ export async function getRecipesByTitle(searchTerm: string, offset: number, limi
  * @param mode 絞り込みモード
  * @returns Repo型の配列と、まだ取得できるレシピがあるかを示すhasMoreフラグ
  */
-export async function getRecipesByTag(tagName: string, offset: number, limit: number, mode: string, rank: string): Promise<{ recipes: Repo[], hasMore: boolean }> {
+export async function getRecipesByTag(tagName: string, offset: number, limit: number, mode: string, rank: string, sort: string): Promise<{ recipes: Repo[], hasMore: boolean }> { // sortを追加
   const userId = await getUserIdFromSession();
 
-  const { repos, hasMore } = await getReposByTag(userId, tagName, limit, offset, mode, rank);
+  const { repos, hasMore } = await getReposByTag(userId, tagName, limit, offset, mode, rank, sort); // sortを追加
   return { recipes: repos, hasMore };
 }
 
@@ -67,12 +67,14 @@ export async function getRecipesByTag(tagName: string, offset: number, limit: nu
  * @param offset スキップするレシピの件数
  * @param limit 取得するレシピの最大件数
  * @param mode 絞り込みモード
+ * @param rank いいねランク
+ * @param sort ソート順 ('asc' または 'desc') // 追加
  * @returns Repo型の配列と、まだ取得できるレシピがあるかを示すhasMoreフラグ
  */
-export async function getRecipesByFolder(folderName: string, offset: number, limit: number, mode: string, rank: string): Promise<{ recipes: Repo[], hasMore: boolean }> {
+export async function getRecipesByFolder(folderName: string, offset: number, limit: number, mode: string, rank: string, sort: string): Promise<{ recipes: Repo[], hasMore: boolean }> { // sortを追加
   const userId = await getUserIdFromSession();
 
-  const { repos, hasMore } = await getReposByFolder(userId, folderName, limit, offset, mode, rank);
+  const { repos, hasMore } = await getReposByFolder(userId, folderName, limit, offset, mode, rank, sort); // sortを追加
   return { recipes: repos, hasMore };
 }
 
@@ -95,21 +97,23 @@ export async function getFilteredRecipes(
   searchMode?: string,
   searchTag?: string,
   folderName?: string,
-  searchRank?: string
+  searchRank?: string,
+  searchSort?: string // 追加
 ): Promise<{ recipes: Repo[]; hasMore: boolean }> {
   const mode = searchMode || 'all';
   const rank = searchRank || 'all';
+  const sort = searchSort || 'desc'; // 追加: デフォルトは降順
 
   if (searchTerm && /^[0-9]+$/.test(searchTerm)) {
     return await getRecipeById(parseInt(searchTerm, 10));
   } else if (folderName) {
-    return await getRecipesByFolder(folderName, offset, limit, mode, rank);
+    return await getRecipesByFolder(folderName, offset, limit, mode, rank, sort); // sortを渡す
   } else if (searchTag) {
-    return await getRecipesByTag(searchTag, offset, limit, mode, rank);
+    return await getRecipesByTag(searchTag, offset, limit, mode, rank, sort); // sortを渡す
   } else if (searchTerm) {
-    return await getRecipesByTitle(searchTerm, offset, limit, mode, rank);
+    return await getRecipesByTitle(searchTerm, offset, limit, mode, rank, sort); // sortを渡す
   } else {
-    return await getRecipes(offset, limit, mode, rank);
+    return await getRecipes(offset, limit, mode, rank, sort); // sortを渡す
   }
 }
 
