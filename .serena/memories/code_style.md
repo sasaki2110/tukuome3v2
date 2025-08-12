@@ -1,1 +1,0 @@
-The project uses the standard Next.js ESLint configuration (`next/core-web-vitals`, `next/typescript`). This implies a preference for modern JavaScript/TypeScript features, React best practices, and a focus on web vitals. The code is likely formatted according to Prettier, which is a common companion to the Next.js ESLint config, although not explicitly mentioned.

@@ -311,7 +311,7 @@ export default function RecipeForm({ recipeId, isEditMode = false }: RecipeFormP
 
       {/* Action Buttons */}
       <div className="flex justify-end space-x-4 mt-4">
-        <Button variant="outline" onClick={() => router.push('/recipes')}>閉じる</Button>
+        <Button variant="outline" onClick={() => router.back()}>閉じる</Button>
         {isEditMode && (
           <>
             <Button variant="destructive" onClick={handleDeleteRecipe} disabled={isAdding}>
