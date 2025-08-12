@@ -182,12 +182,21 @@ export async function addRecipe(
     image: string;
     title: string;
     tsukurepo: string;
-    recipe_type: 'main_dish' | 'side_dish' | 'other';
     tags: string[];
+    isMain: number;
+    isSub: number;
   }
 ): Promise<void> {
   const userId = await getUserIdFromSession();
-  await insertRecipe(userId, recipeData);
+  await insertRecipe(userId, {
+    id_n: recipeData.id_n,
+    image: recipeData.image,
+    title: recipeData.title,
+    tsukurepo: recipeData.tsukurepo,
+    tags: recipeData.tags,
+    isMain: recipeData.isMain,
+    isSub: recipeData.isSub,
+  });
 }
 
 /**
@@ -209,12 +218,21 @@ export async function updateRecipe(
     image: string;
     title: string;
     tsukurepo: string;
-    recipe_type: 'main_dish' | 'side_dish' | 'other';
     tags: string[];
+    isMain: number;
+    isSub: number;
   }
 ): Promise<void> {
   const userId = await getUserIdFromSession();
-  await updateRecipeDb(userId, recipeData);
+  await updateRecipeDb(userId, {
+    id_n: recipeData.id_n,
+    image: recipeData.image,
+    title: recipeData.title,
+    tsukurepo: recipeData.tsukurepo,
+    tags: recipeData.tags,
+    isMain: recipeData.isMain,
+    isSub: recipeData.isSub,
+  });
 }
 
 // フォルダー関連のサーバーアクション

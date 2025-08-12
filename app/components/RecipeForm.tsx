@@ -23,11 +23,14 @@ export default function RecipeForm({ recipeId, isEditMode = false }: RecipeFormP
   const [recipeDetails, setRecipeDetails] = useState<RecipeDetails | null>(null);
   const [selectedMainTags, setSelectedMainTags] = useState<Tag[]>([]);
   const [selectedCategoryTags, setSelectedCategoryTags] = useState<Tag[]>([]);
-  const [recipeType, setRecipeType] = useState<'main_dish' | 'side_dish' | 'other'>('other');
+
   const [isPending, startTransition] = useTransition();
   const [isAdding, startAddingTransition] = useTransition();
   const [isReloading, startReloadingTransition] = useTransition();
   const [initialLoad, setInitialLoad] = useState(true);
+
+  const [isMainChecked, setIsMainChecked] = useState(false);
+  const [isSubChecked, setIsSubChecked] = useState(false);
 
   useEffect(() => {
     if (isEditMode && recipeId && initialLoad) {
@@ -37,6 +40,13 @@ export default function RecipeForm({ recipeId, isEditMode = false }: RecipeFormP
           if (recipes.length > 0) {
             const recipe = recipes[0];
             setRecipeNumber(recipe.id_n.toString());
+
+            let derivedRecipeType: 'main_dish' | 'side_dish' | 'other' = 'other';
+            if (recipe.ismain === 1) {
+              derivedRecipeType = 'main_dish';
+            } else if (recipe.issub === 1) {
+              derivedRecipeType = 'side_dish';
+            }
             setRecipeDetails({
               scrapedInfo: {
                 title: recipe.title,
@@ -45,12 +55,14 @@ export default function RecipeForm({ recipeId, isEditMode = false }: RecipeFormP
                 author: recipe.author || '',
               },
               llmOutput: {
-                recipe_type: recipe.recipe_type,
+                recipe_type: derivedRecipeType,
                 main_ingredients: recipe.tags?.filter(tag => tag.startsWith('素材別')) || [],
                 categories: recipe.tags?.filter(tag => tag.startsWith('料理')) || [],
               },
+
             });
-            setRecipeType(recipe.recipe_type);
+            setIsMainChecked(recipe.ismain === 1);
+            setIsSubChecked(recipe.issub === 1);
             setSelectedMainTags(recipe.tags?.filter(tag => tag.startsWith('素材別')).map(name => ({ id: 0, name, dispname: name.replace(/^(素材別|料理)/, ''), level: 0 })) || []);
             setSelectedCategoryTags(recipe.tags?.filter(tag => tag.startsWith('料理')).map(name => ({ id: 0, name, dispname: name.replace(/^(素材別|料理)/, ''), level: 0 })) || []);
           } else {
@@ -74,7 +86,9 @@ export default function RecipeForm({ recipeId, isEditMode = false }: RecipeFormP
       const details = await getRecipeDetailsFromUrl(recipeNumber);
       setRecipeDetails(details);
       if (details?.llmOutput.recipe_type) {
-        setRecipeType(details.llmOutput.recipe_type);
+        const llmRecipeType = details.llmOutput.recipe_type;
+        setIsMainChecked(llmRecipeType === 'main_dish');
+        setIsSubChecked(llmRecipeType === 'side_dish');
       }
       if (!details) {
         alert('指定のレシピが存在しないようです。レシピ番号を確認してください。');
@@ -122,7 +136,8 @@ export default function RecipeForm({ recipeId, isEditMode = false }: RecipeFormP
           image: scrapedInfo.image,
           title: `${scrapedInfo.title}${scrapedInfo.author ? ' by ' + scrapedInfo.author : ''}`,
           tsukurepo: scrapedInfo.tsukurepo,
-          recipe_type: recipeType,
+          isMain: isMainChecked ? 1 : 0,
+          isSub: isSubChecked ? 1 : 0,
           tags: allSelectedTags.map(tag => tag.name),
         });
         alert('レシピが追加されました！');
@@ -173,7 +188,8 @@ export default function RecipeForm({ recipeId, isEditMode = false }: RecipeFormP
           image: scrapedInfo.image,
           title: `${scrapedInfo.title}${scrapedInfo.author ? ' by ' + scrapedInfo.author : ''}`,
           tsukurepo: scrapedInfo.tsukurepo,
-          recipe_type: recipeType,
+          isMain: isMainChecked ? 1 : 0,
+          isSub: isSubChecked ? 1 : 0,
           tags: allSelectedTags.map(tag => tag.name),
         });
         alert('レシピが更新されました！');
@@ -221,7 +237,7 @@ export default function RecipeForm({ recipeId, isEditMode = false }: RecipeFormP
           </div>
           <div>
             <label className="block text-sm font-medium">画像</label>
-            <div className="p-2 border rounded-md bg-gray-100 h-40 relative">
+            <div className="p-2 border rounded-md bg-gray-100 h-50 w-50 relative">
               {scrapedInfo?.image && (
                 <Image src={scrapedInfo.image} alt={scrapedInfo.title || ''} layout="fill" objectFit="cover" />
               )}
@@ -239,16 +255,16 @@ export default function RecipeForm({ recipeId, isEditMode = false }: RecipeFormP
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="main-dish"
-                  checked={recipeType === 'main_dish'}
-                  onCheckedChange={(checked) => setRecipeType(checked ? 'main_dish' : 'other')}
+                  checked={isMainChecked}
+                  onCheckedChange={(checked) => setIsMainChecked(checked === true)}
                 />
                 <label htmlFor="main-dish">主菜</label>
               </div>
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="side-dish"
-                  checked={recipeType === 'side_dish'}
-                  onCheckedChange={(checked) => setRecipeType(checked ? 'side_dish' : 'other')}
+                  checked={isSubChecked}
+                  onCheckedChange={(checked) => setIsSubChecked(checked === true)}
                 />
                 <label htmlFor="side-dish">副菜</label>
               </div>

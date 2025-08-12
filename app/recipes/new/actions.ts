@@ -118,6 +118,8 @@ const createLLMSchema = (mainIngredientTags: string[], categoryTags: string[]) =
 
     return z.object({
         recipe_type: z.enum(["main_dish", "side_dish", "other"]),
+
+
         main_ingredients: z.array(z.enum(safeMainIngredientTags as [string, ...string[]])),
         categories: z.array(z.enum(safeCategoryTags as [string, ...string[]])),
     });

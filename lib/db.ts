@@ -335,13 +335,12 @@ export async function insertRecipe(
     image: string;
     title: string;
     tsukurepo: string; // Will be converted to reposu_n
-    recipe_type: 'main_dish' | 'side_dish' | 'other';
     tags: string[]; // Combined tags
+    isMain: number;
+    isSub: number;
   }
 ): Promise<void> {
-  const reposu_n = parseInt(recipeData.tsukurepo, 10) || 0; // Convert tsukurepo to number
-  const isMain = recipeData.recipe_type === 'main_dish' ? 1 : 0;
-  const isSub = recipeData.recipe_type === 'side_dish' ? 1 : 0;
+  const reposu_n = parseInt(recipeData.tsukurepo, 10) || 0;
   const tagString = recipeData.tags.join(' '); // Join tags into a single string
 
   await sql`
@@ -365,8 +364,8 @@ export async function insertRecipe(
       ${reposu_n},
       '', -- Default comment to empty string
       ${tagString},
-      ${isMain},
-      ${isSub}
+      ${recipeData.isMain},
+      ${recipeData.isSub}
     );
   `;
 }
@@ -394,13 +393,12 @@ export async function updateRecipe(
     image: string;
     title: string;
     tsukurepo: string; // Will be converted to reposu_n
-    recipe_type: 'main_dish' | 'side_dish' | 'other';
     tags: string[]; // Combined tags
+    isMain: number;
+    isSub: number;
   }
 ): Promise<void> {
   const reposu_n = parseInt(recipeData.tsukurepo, 10) || 0;
-  const isMain = recipeData.recipe_type === 'main_dish' ? 1 : 0;
-  const isSub = recipeData.recipe_type === 'side_dish' ? 1 : 0;
   const tagString = recipeData.tags.join(' ');
 
   await sql`
@@ -409,8 +407,8 @@ export async function updateRecipe(
       title = ${recipeData.title},
       reposu_n = ${reposu_n},
       tag = ${tagString},
-      ismain = ${isMain},
-      issub = ${isSub}
+      ismain = ${recipeData.isMain},
+      issub = ${recipeData.isSub}
     WHERE userid = ${userId} AND id_n = ${recipeData.id_n};
   `;
 }
