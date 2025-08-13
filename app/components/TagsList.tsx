@@ -1,55 +1,75 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { DispTag } from '@/app/model/model';
-import { TagCard } from './TagCard';
-import { getDispTags } from '@/lib/services';
 import { useRouter } from 'next/navigation';
+import { TagCard } from './TagCard';
+import { Skeleton } from '@/components/ui/skeleton';
+import { getDispTags } from '@/lib/services';
+import { DispTag } from '@/app/model/model';
 
-interface TagsListProps {
+type TagsListProps = {
   initialTags: DispTag[];
-}
+};
 
 export function TagsList({ initialTags }: TagsListProps) {
-  const [tags, setTags] = useState<DispTag[]>(initialTags);
-  const [currentLevel, setCurrentLevel] = useState(0);
-  const [currentValue, setCurrentValue] = useState('');
-  const [isLoading, setIsLoading] = useState(false); // ローディング状態を追加
   const router = useRouter();
+  const [tags, setTags] = useState<DispTag[]>(initialTags);
+  const [path, setPath] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    // The initial tags are already passed as props, so this effect
-    // will run when the user clicks a tag to drill down.
-    if (currentLevel > 0) {
-      async function fetchTags() {
-        setIsLoading(true); // フェッチ開始時にローディングをtrueに
+    if (path.length > 0) {
+      const fetchTags = async () => {
+        setIsLoading(true);
+        const currentLevel = path.length;
+        const currentValue = path[path.length - 1];
         const newTags = await getDispTags(currentLevel, currentValue);
         setTags(newTags);
-        setIsLoading(false); // フェッチ完了時にローディングをfalseに
-      }
+        setIsLoading(false);
+      };
       fetchTags();
+    } else {
+      setTags(initialTags);
     }
-  }, [currentLevel, currentValue]);
+  }, [path, initialTags]);
 
   const handleTagClick = (tag: DispTag) => {
     if (tag.hasschildren === '▼') {
-      setCurrentLevel(prevLevel => prevLevel + 1);
-      setCurrentValue(tag.name);
+      setPath(prevPath => [...prevPath, tag.name]);
     } else {
       router.push(`/recipes?tag=${tag.name}`);
     }
   };
 
+  const handleGoBack = () => {
+    setPath(prevPath => prevPath.slice(0, -1));
+  };
+
   return (
     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 p-2">
       {isLoading ? (
-        <div className="col-span-full text-center py-8">読み込み中...</div> // ローディング表示
+        [...Array(12)].map((_, i) => (
+          <Skeleton key={i} className="h-24 w-full rounded-lg" />
+        ))
       ) : (
-        tags
-          .filter((tag) => tag.hasimageuri === "1")
-          .map((tag) => (
+        <>
+          {tags
+            .filter((tag) => tag.hasimageuri === "1")
+            .map((tag) => (
             <TagCard key={tag.id} tag={tag} onClick={handleTagClick} />
-          ))
+          ))}
+
+          {path.length > 0 && (
+            <TagCard key="back-button" tag={{
+              id: -1, // ユニークな固定値
+              dispname: '↩️ 前に戻る',
+              name: 'back',
+              imageuri: '',
+              hasimageuri: '0', // 画像なし
+              hasschildren: '', // 件数表示なし
+            }} onClick={() => handleGoBack()} />
+          )}
+        </>
       )}
     </div>
   );
