@@ -114,3 +114,13 @@ export type Folder = {
   idofrepos: string,
   isInFolder?: boolean;
 }
+
+// マスタータグ型
+export type MasterTag = {
+  gen: number, // 主キー 0: 前世代 1: 現世代
+  id: number, // 主キー（ソート用）
+  l: string,
+  m: string,
+  s: string,
+  ss: string;
+}

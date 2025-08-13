@@ -8,6 +8,7 @@ const users = [
   { id: '1', username: 'sahamaru', name: 'sahamaru' },
   { id: '2', username: 'tonkati', name: 'tonkati' },
   { id: '3', username: 'sasaking', name: 'sasaking' },
+  { id: '4', username: 'sara', name: 'sara' },
 ];
 
 // --- NextAuthの設定オブジェクトを定義し、エクスポートします ---

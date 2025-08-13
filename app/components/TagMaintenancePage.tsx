@@ -14,7 +14,7 @@ export default function TagMaintenancePage() {
   const router = useRouter();
 
   useEffect(() => {
-    loadMasterTags('masterTags.txt').then((result) => {
+    loadMasterTags(1).then((result) => {
       if (result.success) {
         setMasterTags(result.data || '');
       } else {
@@ -26,10 +26,10 @@ export default function TagMaintenancePage() {
 
   const handleLoadBackup = () => {
     startTransition(async () => {
-        const result = await loadMasterTags('masterTags_bak.txt');
+        const result = await loadMasterTags(0);
         if (result.success) {
             setMasterTags(result.data || '');
-            alert('バックアップを読み込みました。');
+            alert('オリジナルマスタを読み込みました。');
         } else {
             alert(result.message);
         }
@@ -37,6 +37,14 @@ export default function TagMaintenancePage() {
   };
 
   const handleSubmit = async () => {
+    const confirmation = confirm(
+      "マスタタグを生成します。\n処理時間に２分ほど頂戴いたします。\n実行してもよろしいですか？"
+    );
+
+    if (!confirmation) {
+      return;
+    }
+
     const formData = new FormData();
     formData.append('masterTags', masterTags);
 
@@ -56,7 +64,7 @@ export default function TagMaintenancePage() {
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">タグメンテナンス</h1>
+      <h1 className="text-2xl font-bold mb-4">タグメンテナンス（タグ間はTABで区切って下さい。）</h1>
       <div className="space-y-4">
         <Textarea
           value={masterTags}

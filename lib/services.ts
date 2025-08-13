@@ -1,7 +1,7 @@
 'use server';
 
-import { getRepos, getReposByTitle, getReposByTag, getRepoById, updateLikeStatus, updateComment, getAuthers, getDispTagsOptimized, getReposByFolder, getTagsByNamePattern, insertRecipe, deleteRecipe as deleteRecipeDb, updateRecipe as updateRecipeDb, deleteAllTags, insertTags } from './db';
-import { Repo, Auther, DispTag, Tag } from '@/app/model/model';
+import { getRepos, getReposByTitle, getReposByTag, getRepoById, updateLikeStatus, updateComment, getAuthers, getDispTagsOptimized, getReposByFolder, getTagsByNamePattern, insertRecipe, deleteRecipe as deleteRecipeDb, updateRecipe as updateRecipeDb, deleteAllTags, insertTags, getMasterTags, updateMasterTags } from './db';
+import { Repo, Auther, DispTag, Tag, MasterTag } from '@/app/model/model';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
@@ -235,6 +235,27 @@ export async function updateRecipe(
   });
 }
 
+/**
+ * DBからマスタータグを取得し、タブ区切り文字列に変換して返します。
+ * @param gen 世代 (0: 前世代, 1: 現世代)
+ * @returns タブ区切り文字列
+ */
+export async function loadMasterTagsFromDb(gen: number): Promise<string> {
+  const masterTags = await getMasterTags(gen);
+  
+  // MasterTag[] をタブ区切り文字列に変換
+  const lines = masterTags.map(tag => {
+    // l, m, s, ss の順にタブで結合
+    // null や undefined の場合は空文字列にする
+    return `${tag.l || ''}	${tag.m || ''}	${tag.s || ''}	${tag.ss || ''}`;
+  });
+
+   // ヘッダー行とデータ行を結合して返す
+   const result = `l\tm\ts\tss\n${lines.join('\n')}`; // ここでヘッダーとデータ行を結合
+   console.log("Formatted masterTags for display:", result); // デバッグ用ログ
+   return result;
+}
+
 // フォルダー関連のサーバーアクション
 
 import { getFolders, addFolder, deleteFolder, addRecipeToFolder, removeRecipeFromFolder, getFoldersWithImages } from './db';
@@ -278,4 +299,87 @@ export async function updateTags(tags: { id: number; level: number; dispName: st
   // この操作は特定のユーザーに紐づかないため、セッションチェックは不要
   await deleteAllTags();
   await insertTags(tags.map(t => ({ id: t.id, level: t.level, dispname: t.dispName, name: t.name })));
+}
+
+/**
+ * タグメンテナンス画面から受け取ったテキストを元に、MasterTagテーブルとtagテーブルを更新します。
+ * @param masterTagText タグメンテナンス画面のテキストエリアの内容（タブ区切り文字列）
+ */
+export async function updateMasterTagsInDb(masterTagText: string): Promise<void> {
+  const lines = masterTagText.trim().split('\n');
+  const newMasterTags: MasterTag[] = [];
+  let idCounter = 1;
+
+  // ヘッダー行をスキップ
+  const dataLines = lines.slice(1);
+
+  for (const line of dataLines) {
+    const columns = line.split('\t').map(c => c.trim());
+    
+    // 空行はスキップ
+    if (columns.every(c => c === '')) continue;
+
+    const l = columns[0] || '';
+    const m = columns[1] || '';
+    const s = columns[2] || '';
+    const ss = columns[3] || '';
+
+    newMasterTags.push({
+      gen: 1, // 現世代
+      id: idCounter++, // 1からの連番
+      l, m, s, ss
+    });
+  }
+
+  // MasterTagテーブルの更新
+  await updateMasterTags(newMasterTags);
+
+  // MasterTagのデータ（gen=1）を元に、tagテーブルを更新
+  const tagsForTagTable: { id: number; level: number; dispname: string; name: string }[] = [];
+  let tagTableIdCounter = 1; // tagテーブル用の独立したIDカウンター
+  const existingTagNames = new Set<string>(); // 重複チェック用
+
+  for (const mt of newMasterTags) {
+    const path: string[] = [];
+
+    if (mt.l) {
+      path.push(mt.l);
+      const name = path.join('');
+      if (!existingTagNames.has(name)) {
+        tagsForTagTable.push({ id: tagTableIdCounter++, level: 0, dispname: mt.l, name });
+        existingTagNames.add(name);
+      }
+    }
+
+    if (mt.m) {
+      path.push(mt.m);
+      const name = path.join('');
+      if (!existingTagNames.has(name)) {
+        tagsForTagTable.push({ id: tagTableIdCounter++, level: 1, dispname: mt.m, name });
+        existingTagNames.add(name);
+      }
+    }
+
+    if (mt.s) {
+      path.push(mt.s);
+      const name = path.join('');
+      if (!existingTagNames.has(name)) {
+        tagsForTagTable.push({ id: tagTableIdCounter++, level: 2, dispname: mt.s, name });
+        existingTagNames.add(name);
+      }
+    }
+
+    if (mt.ss) {
+      path.push(mt.ss);
+      const name = path.join('');
+      if (!existingTagNames.has(name)) {
+        tagsForTagTable.push({ id: tagTableIdCounter++, level: 3, dispname: mt.ss, name });
+        existingTagNames.add(name);
+      }
+    }
+  }
+
+  // tagテーブルの更新
+  await deleteAllTags();
+  await insertTags(tagsForTagTable);
 }

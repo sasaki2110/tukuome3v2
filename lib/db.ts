@@ -1,5 +1,5 @@
 import { sql } from '@vercel/postgres';
-import { Repo, Auther, DispTag, Tag, RawRepo } from '@/app/model/model';
+import { Repo, Auther, DispTag, Tag, RawRepo, MasterTag } from '@/app/model/model';
 
 function getModeWhereClause(mode: string): string {
   switch (mode) {
@@ -427,6 +427,46 @@ export async function deleteAllTags(): Promise<void> {
 export async function insertTags(tags: { id: number; level: number; dispname: string; name: string }[]): Promise<void> {
   for (const tag of tags) {
     await sql`INSERT INTO tag (id, level, dispname, name) VALUES (${tag.id}, ${tag.level}, ${tag.dispname}, ${tag.name});`;
+  }
+}
+
+/**
+ * 指定された世代のマスタータグを取得します。
+ * @param gen 世代 (0: 前世代, 1: 現世代)
+ * @returns MasterTag型の配列
+ */
+export async function getMasterTags(gen: number): Promise<MasterTag[]> {
+  const { rows } = await sql<MasterTag>`
+    SELECT gen, id, l, m, s, ss
+    FROM mastertag
+    WHERE gen = ${gen}
+    ORDER BY gen ASC, id ASC;
+  `;
+  return rows;
+}
+
+/**
+ * マスタータグテーブルを更新します。
+ * トランザクション内で以下の処理を実行します。
+ * 1. gen=0 のレコードを削除
+ * 2. gen=1 のレコードを gen=0 としてコピー
+ * 3. gen=1 のレコードを削除
+ * 4. 新しい gen=1 のレコードを挿入
+ * @param newMasterTags 新しい現世代 (gen=1) のMasterTagデータの配列
+ */
+export async function updateMasterTags(newMasterTags: MasterTag[]): Promise<void> {
+  // 1. gen=0 のレコードを削除
+  await sql`DELETE FROM mastertag WHERE gen = 0;`;
+
+  // 2. gen=1 のレコードを gen=0 としてコピー
+  await sql`INSERT INTO mastertag (gen, id, l, m, s, ss) SELECT 0, id, l, m, s, ss FROM mastertag WHERE gen = 1;`;
+
+  // 3. gen=1 のレコードを削除
+  await sql`DELETE FROM mastertag WHERE gen = 1;`;
+
+  // 4. 新しい gen=1 のレコードを挿入
+  for (const tag of newMasterTags) {
+    await sql`INSERT INTO mastertag (gen, id, l, m, s, ss) VALUES (${tag.gen}, ${tag.id}, ${tag.l}, ${tag.m}, ${tag.s}, ${tag.ss});`;
   }
 }
 
