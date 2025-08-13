@@ -45,9 +45,11 @@ export function TagsList({ initialTags }: TagsListProps) {
       {isLoading ? (
         <div className="col-span-full text-center py-8">読み込み中...</div> // ローディング表示
       ) : (
-        tags.map((tag) => (
-          <TagCard key={tag.id} tag={tag} onClick={handleTagClick} />
-        ))
+        tags
+          .filter((tag) => tag.hasimageuri === "1")
+          .map((tag) => (
+            <TagCard key={tag.id} tag={tag} onClick={handleTagClick} />
+          ))
       )}
     </div>
   );
