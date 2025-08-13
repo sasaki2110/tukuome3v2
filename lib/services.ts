@@ -1,6 +1,6 @@
 'use server';
 
-import { getRepos, getReposByTitle, getReposByTag, getRepoById, updateLikeStatus, updateComment, getAuthers, getDispTagsOptimized, getReposByFolder, getTagsByNamePattern, insertRecipe, deleteRecipe as deleteRecipeDb, updateRecipe as updateRecipeDb } from './db';
+import { getRepos, getReposByTitle, getReposByTag, getRepoById, updateLikeStatus, updateComment, getAuthers, getDispTagsOptimized, getReposByFolder, getTagsByNamePattern, insertRecipe, deleteRecipe as deleteRecipeDb, updateRecipe as updateRecipeDb, deleteAllTags, insertTags } from './db';
 import { Repo, Auther, DispTag, Tag } from '@/app/model/model';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -268,4 +268,14 @@ export async function addRecipeToFolderAction(folderName: string, recipeId: stri
 export async function removeRecipeFromFolderAction(folderName: string, recipeId: string): Promise<void> {
   const userId = await getUserIdFromSession();
   await removeRecipeFromFolder(userId, folderName, recipeId);
+}
+
+/**
+ * タグ情報をDBで更新します。
+ * @param tags 更新するタグのデータ
+ */
+export async function updateTags(tags: { id: number; level: number; dispName: string; name: string }[]): Promise<void> {
+  // この操作は特定のユーザーに紐づかないため、セッションチェックは不要
+  await deleteAllTags();
+  await insertTags(tags.map(t => ({ id: t.id, level: t.level, dispname: t.dispName, name: t.name })));
 }

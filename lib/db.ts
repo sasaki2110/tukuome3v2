@@ -413,6 +413,23 @@ export async function updateRecipe(
   `;
 }
 
+/**
+ * すべてのタグを削除します。
+ */
+export async function deleteAllTags(): Promise<void> {
+  await sql`DELETE FROM tag;`;
+}
+
+/**
+ * 新しいタグの配列を挿入します。
+ * @param tags 挿入するタグの配列
+ */
+export async function insertTags(tags: { id: number; level: number; dispname: string; name: string }[]): Promise<void> {
+  for (const tag of tags) {
+    await sql`INSERT INTO tag (id, level, dispname, name) VALUES (${tag.id}, ${tag.level}, ${tag.dispname}, ${tag.name});`;
+  }
+}
+
 // フォルダー関連のDB操作
 
 import { Folder } from '@/app/model/model';
