@@ -157,8 +157,8 @@ export async function fetchAuthers(offset: number, limit: number): Promise<{ aut
  * @returns Tag型の配列
  */
 export async function getTagsByName(pattern: string): Promise<Tag[]> {
-  // userId is not needed for getTagsByNamePattern as the tag table is shared
-  return await getTagsByNamePattern(pattern);
+  const userId = await getUserIdFromSession();
+  return await getTagsByNamePattern(userId, pattern);
 }
 
 /**
@@ -241,7 +241,8 @@ export async function updateRecipe(
  * @returns タブ区切り文字列
  */
 export async function loadMasterTagsFromDb(gen: number): Promise<string> {
-  const masterTags = await getMasterTags(gen);
+  const userId = await getUserIdFromSession();
+  const masterTags = await getMasterTags(userId, gen);
   
   // MasterTag[] をタブ区切り文字列に変換
   const lines = masterTags.map(tag => {
@@ -250,10 +251,9 @@ export async function loadMasterTagsFromDb(gen: number): Promise<string> {
     return `${tag.l || ''}	${tag.m || ''}	${tag.s || ''}	${tag.ss || ''}`;
   });
 
-   // ヘッダー行とデータ行を結合して返す
-   const result = `l\tm\ts\tss\n${lines.join('\n')}`; // ここでヘッダーとデータ行を結合
-   console.log("Formatted masterTags for display:", result); // デバッグ用ログ
-   return result;
+  // ヘッダー行とデータ行を結合して返す
+  const result = `l\tm\ts\tss\n${lines.join('\n')}`; // ここでヘッダーとデータ行を結合
+  return result;
 }
 
 // フォルダー関連のサーバーアクション
@@ -296,9 +296,9 @@ export async function removeRecipeFromFolderAction(folderName: string, recipeId:
  * @param tags 更新するタグのデータ
  */
 export async function updateTags(tags: { id: number; level: number; dispName: string; name: string }[]): Promise<void> {
-  // この操作は特定のユーザーに紐づかないため、セッションチェックは不要
-  await deleteAllTags();
-  await insertTags(tags.map(t => ({ id: t.id, level: t.level, dispname: t.dispName, name: t.name })));
+  const userId = await getUserIdFromSession();
+  await deleteAllTags(userId);
+  await insertTags(userId, tags.map(t => ({ id: t.id, level: t.level, dispname: t.dispName, name: t.name })));
 }
 
 /**
@@ -306,6 +306,7 @@ export async function updateTags(tags: { id: number; level: number; dispName: st
  * @param masterTagText タグメンテナンス画面のテキストエリアの内容（タブ区切り文字列）
  */
 export async function updateMasterTagsInDb(masterTagText: string): Promise<void> {
+  const userId = await getUserIdFromSession();
   const lines = masterTagText.trim().split('\n');
   const newMasterTags: MasterTag[] = [];
   let idCounter = 1;
@@ -332,7 +333,7 @@ export async function updateMasterTagsInDb(masterTagText: string): Promise<void>
   }
 
   // MasterTagテーブルの更新
-  await updateMasterTags(newMasterTags);
+  await updateMasterTags(userId, newMasterTags);
 
   // MasterTagのデータ（gen=1）を元に、tagテーブルを更新
   const tagsForTagTable: { id: number; level: number; dispname: string; name: string }[] = [];
@@ -380,6 +381,6 @@ export async function updateMasterTagsInDb(masterTagText: string): Promise<void>
   }
 
   // tagテーブルの更新
-  await deleteAllTags();
-  await insertTags(tagsForTagTable);
+  await deleteAllTags(userId);
+  await insertTags(userId, tagsForTagTable);
 }

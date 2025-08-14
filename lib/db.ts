@@ -1,3 +1,4 @@
+
 import { sql } from '@vercel/postgres';
 import { Repo, Auther, DispTag, Tag, RawRepo, MasterTag } from '@/app/model/model';
 
@@ -265,12 +266,12 @@ export async function getDispTagsOptimized(userId: string, level: number, value:
         t.dispname,
         t.name,
         (SELECT image FROM repo WHERE userid = $1 AND tag LIKE '%' || t.name || '%' ORDER BY reposu_n DESC, id_n DESC LIMIT 1) AS imageuri,
-        (SELECT COUNT(*) FROM tag WHERE level = t.level + 1 AND name LIKE t.name || '%') AS child_tag_count,
+        (SELECT COUNT(*) FROM tag WHERE userid = $1 AND level = t.level + 1 AND name LIKE t.name || '%') AS child_tag_count,
         (SELECT COUNT(*) FROM repo WHERE userid = $1 AND tag LIKE '%' || t.name || '%') AS recipe_count
     FROM
         tag t
     WHERE
-        t.level = $2
+        t.userid = $1 AND t.level = $2
   `;
 
   if (value === "") {
@@ -313,11 +314,11 @@ export async function getDispTagsOptimized(userId: string, level: number, value:
  * @param pattern 検索パターン
  * @returns Tag型の配列
  */
-export async function getTagsByNamePattern(pattern: string): Promise<Tag[]> {
+export async function getTagsByNamePattern(userId: string, pattern: string): Promise<Tag[]> {
   const { rows } = await sql<Tag>`
     SELECT id, name, dispname, level
     FROM tag
-    WHERE name LIKE ${pattern}
+    WHERE userid = ${userId} AND name LIKE ${pattern}
     ORDER BY level, id;
   `;
   return rows;
@@ -414,59 +415,58 @@ export async function updateRecipe(
 }
 
 /**
- * すべてのタグを削除します。
+ * 指定されたユーザーのすべてのタグを削除します。
+ * @param userId ユーザーID
  */
-export async function deleteAllTags(): Promise<void> {
-  await sql`DELETE FROM tag;`;
+export async function deleteAllTags(userId: string): Promise<void> {
+  await sql`DELETE FROM tag WHERE userid = ${userId};`;
 }
 
 /**
  * 新しいタグの配列を挿入します。
+ * @param userId ユーザーID
  * @param tags 挿入するタグの配列
  */
-export async function insertTags(tags: { id: number; level: number; dispname: string; name: string }[]): Promise<void> {
+export async function insertTags(userId: string, tags: { id: number; level: number; dispname: string; name: string }[]): Promise<void> {
   for (const tag of tags) {
-    await sql`INSERT INTO tag (id, level, dispname, name) VALUES (${tag.id}, ${tag.level}, ${tag.dispname}, ${tag.name});`;
+    await sql`INSERT INTO tag (userid, id, level, dispname, name) VALUES (${userId}, ${tag.id}, ${tag.level}, ${tag.dispname}, ${tag.name});`;
   }
 }
 
 /**
- * 指定された世代のマスタータグを取得します。
+ * 指定されたユーザーの指定された世代のマスタータグを取得します。
+ * @param userId ユーザーID
  * @param gen 世代 (0: 前世代, 1: 現世代)
  * @returns MasterTag型の配列
  */
-export async function getMasterTags(gen: number): Promise<MasterTag[]> {
+export async function getMasterTags(userId: string, gen: number): Promise<MasterTag[]> {
   const { rows } = await sql<MasterTag>`
     SELECT gen, id, l, m, s, ss
     FROM mastertag
-    WHERE gen = ${gen}
+    WHERE userid = ${userId} AND gen = ${gen}
     ORDER BY gen ASC, id ASC;
   `;
   return rows;
 }
 
 /**
- * マスタータグテーブルを更新します。
- * トランザクション内で以下の処理を実行します。
- * 1. gen=0 のレコードを削除
- * 2. gen=1 のレコードを gen=0 としてコピー
- * 3. gen=1 のレコードを削除
- * 4. 新しい gen=1 のレコードを挿入
+ * 指定されたユーザーのマスタータグテーブルを更新します。
+ * @param userId ユーザーID
  * @param newMasterTags 新しい現世代 (gen=1) のMasterTagデータの配列
  */
-export async function updateMasterTags(newMasterTags: MasterTag[]): Promise<void> {
+export async function updateMasterTags(userId: string, newMasterTags: MasterTag[]): Promise<void> {
   // 1. gen=0 のレコードを削除
-  await sql`DELETE FROM mastertag WHERE gen = 0;`;
+  await sql`DELETE FROM mastertag WHERE userid = ${userId} AND gen = 0;`;
 
   // 2. gen=1 のレコードを gen=0 としてコピー
-  await sql`INSERT INTO mastertag (gen, id, l, m, s, ss) SELECT 0, id, l, m, s, ss FROM mastertag WHERE gen = 1;`;
+  await sql`INSERT INTO mastertag (userid, gen, id, l, m, s, ss) SELECT ${userId}, 0, id, l, m, s, ss FROM mastertag WHERE userid = ${userId} AND gen = 1;`;
 
   // 3. gen=1 のレコードを削除
-  await sql`DELETE FROM mastertag WHERE gen = 1;`;
+  await sql`DELETE FROM mastertag WHERE userid = ${userId} AND gen = 1;`;
 
   // 4. 新しい gen=1 のレコードを挿入
   for (const tag of newMasterTags) {
-    await sql`INSERT INTO mastertag (gen, id, l, m, s, ss) VALUES (${tag.gen}, ${tag.id}, ${tag.l}, ${tag.m}, ${tag.s}, ${tag.ss});`;
+    await sql`INSERT INTO mastertag (userid, gen, id, l, m, s, ss) VALUES (${userId}, ${tag.gen}, ${tag.id}, ${tag.l}, ${tag.m}, ${tag.s}, ${tag.ss});`;
   }
 }
 

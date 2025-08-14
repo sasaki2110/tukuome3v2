@@ -29,7 +29,7 @@ export default function TagMaintenancePage() {
         const result = await loadMasterTags(0);
         if (result.success) {
             setMasterTags(result.data || '');
-            alert('オリジナルマスタを読み込みました。');
+            alert('ひとつ前のマスタを読み込みました。');
         } else {
             alert(result.message);
         }
