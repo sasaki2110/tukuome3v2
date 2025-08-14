@@ -18,17 +18,17 @@ interface TagNode extends Tag {
 }
 
 interface TagSelectionGroupProps {
-  pattern: string;
+  patterns: string[];
   onSelectionChange: (selectedTags: Tag[]) => void;
   suggestedTagNames?: string[];
   componentKey?: string; // To force re-render when suggestions change
 }
 
 // Helper function to build the hierarchical tag tree
-const buildTagTree = (tags: Tag[], pattern: string): TagNode[] => {
+const buildTagTree = (tags: Tag[], patterns: string[]): TagNode[] => {
   const nodes: Record<string, TagNode> = {};
   const rootNodes: TagNode[] = [];
-  const patternBase = pattern.replace(/%/g, ''); // e.g., "素材別" or "料理"
+  const patternBases = patterns.map(p => p.replace(/%/g, '')); // e.g., ["素材別", "料理"]
 
   // First pass: Create all nodes and map them by their full name
   tags.forEach(tag => {
@@ -50,19 +50,17 @@ const buildTagTree = (tags: Tag[], pattern: string): TagNode[] => {
       parentNode.isSelectable = false; // A node with children is not selectable itself
     } else {
       // If no parent found, it's a potential root node.
-      // Only add to rootNodes if it starts with the patternBase and is not a child of another node
-      // (This filtering will be done in the third pass)
       rootNodes.push(currentNode);
     }
   });
 
   // Third pass: Filter out nodes that are children of other nodes, and ensure they match the pattern
   const finalRootNodes = rootNodes.filter(node => {
-    // A node is a true root if it's not a child of any other node AND it matches the pattern
     const isChildOfAnotherNode = Object.values(nodes).some(otherNode =>
       otherNode.children.includes(node)
     );
-    return !isChildOfAnotherNode && node.name.startsWith(patternBase);
+    // A node is a true root if it's not a child and its name starts with one of the pattern bases.
+    return !isChildOfAnotherNode && patternBases.some(base => node.name.startsWith(base));
   });
 
   // Sort children for consistent display
@@ -118,8 +116,9 @@ const TagAccordionNode: React.FC<TagAccordionNodeProps> = ({ node, selectedTags,
 };
 
 
-export default function TagSelectionGroup({ pattern, onSelectionChange, suggestedTagNames, componentKey }: TagSelectionGroupProps) {
-  console.log(`TagSelectionGroup: pattern=${pattern}, componentKey=${componentKey}, suggestedTagNames=`, suggestedTagNames);
+export default function TagSelectionGroup({ patterns, onSelectionChange, suggestedTagNames, componentKey }: TagSelectionGroupProps) {
+  const patternForLog = patterns.join(',');
+  console.log(`TagSelectionGroup: patterns=${patternForLog}, componentKey=${componentKey}, suggestedTagNames=`, suggestedTagNames);
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const [tagTree, setTagTree] = useState<TagNode[]>([]);
@@ -134,22 +133,31 @@ export default function TagSelectionGroup({ pattern, onSelectionChange, suggeste
     }
     setSelectedTags(newSelectedTags);
     onSelectionChange(newSelectedTags);
-    console.log(`TagSelectionGroup (${pattern}): handleTagSelection - newSelectedTags=`, newSelectedTags);
-  }, [selectedTags, onSelectionChange, pattern]);
+    console.log(`TagSelectionGroup (${patternForLog}): handleTagSelection - newSelectedTags=`, newSelectedTags);
+  }, [selectedTags, onSelectionChange, patternForLog]);
 
 
   useEffect(() => {
     async function fetchAndProcessTags() {
-      const fetchedTags = await getTagsByName(pattern);
-      setAllTags(fetchedTags);
-      console.log(`TagSelectionGroup (${pattern}): fetchedTags=`, fetchedTags);
+      let allFetchedTags: Tag[] = [];
+      for (const p of patterns) {
+        const fetchedTags = await getTagsByName(p);
+        allFetchedTags.push(...fetchedTags);
+      }
+      // Remove duplicates
+      allFetchedTags = allFetchedTags.filter((tag, index, self) =>
+        index === self.findIndex((t) => t.id === tag.id)
+      );
 
-      const tree = buildTagTree(fetchedTags, pattern);
+      setAllTags(allFetchedTags);
+      console.log(`TagSelectionGroup (${patternForLog}): fetchedTags=`, allFetchedTags);
+
+      const tree = buildTagTree(allFetchedTags, patterns);
       setTagTree(tree);
-      console.log(`TagSelectionGroup (${pattern}): tagTree=`, tree);
+      console.log(`TagSelectionGroup (${patternForLog}): tagTree=`, tree);
     }
     fetchAndProcessTags();
-  }, [pattern, componentKey]);
+  }, [patterns, componentKey]);
 
   useEffect(() => {
     if (allTags.length === 0) return;
@@ -174,13 +182,13 @@ export default function TagSelectionGroup({ pattern, onSelectionChange, suggeste
       );
       setSelectedTags(suggested);
       onSelectionChange(suggested);
-      console.log(`TagSelectionGroup (${pattern}): pre-selected tags=`, suggested);
+      console.log(`TagSelectionGroup (${patternForLog}): pre-selected tags=`, suggested);
     } else {
       setSelectedTags([]); // Clear selection if no suggestions
       onSelectionChange([]);
-      console.log(`TagSelectionGroup (${pattern}): No suggestions or empty, clearing selection.`);
+      console.log(`TagSelectionGroup (${patternForLog}): No suggestions or empty, clearing selection.`);
     }
-  }, [suggestedTagNames, allTags, tagTree, onSelectionChange, pattern]);
+  }, [suggestedTagNames, allTags, tagTree, onSelectionChange, patternForLog]);
 
 
   return (

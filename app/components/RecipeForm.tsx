@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition, useEffect } from 'react';
+import { useState, useTransition, useEffect, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -32,6 +32,9 @@ export default function RecipeForm({ recipeId, isEditMode = false }: RecipeFormP
   const [isMainChecked, setIsMainChecked] = useState(false);
   const [isSubChecked, setIsSubChecked] = useState(false);
 
+  const mainPatterns = useMemo(() => ["素材別%"], []);
+  const categoryPatterns = useMemo(() => ["料理%", "お菓子%", "パン%"], []);
+
   useEffect(() => {
     if (isEditMode && recipeId && initialLoad) {
       const fetchAndSetRecipe = async () => {
@@ -57,14 +60,14 @@ export default function RecipeForm({ recipeId, isEditMode = false }: RecipeFormP
               llmOutput: {
                 recipe_type: derivedRecipeType,
                 main_ingredients: recipe.tags?.filter(tag => tag.startsWith('素材別')) || [],
-                categories: recipe.tags?.filter(tag => tag.startsWith('料理')) || [],
+                categories: recipe.tags?.filter(tag => /^(料理|お菓子|パン)/.test(tag)) || [],
               },
 
             });
             setIsMainChecked(recipe.ismain === 1);
             setIsSubChecked(recipe.issub === 1);
-            setSelectedMainTags(recipe.tags?.filter(tag => tag.startsWith('素材別')).map(name => ({ id: 0, name, dispname: name.replace(/^(素材別|料理)/, ''), level: 0 })) || []);
-            setSelectedCategoryTags(recipe.tags?.filter(tag => tag.startsWith('料理')).map(name => ({ id: 0, name, dispname: name.replace(/^(素材別|料理)/, ''), level: 0 })) || []);
+            setSelectedMainTags(recipe.tags?.filter(tag => tag.startsWith('素材別')).map(name => ({ id: 0, name, dispname: name.replace(/^(素材別|料理|お菓子|パン)/, ''), level: 0 })) || []);
+            setSelectedCategoryTags(recipe.tags?.filter(tag => /^(料理|お菓子|パン)/.test(tag)).map(name => ({ id: 0, name, dispname: name.replace(/^(素材別|料理|お菓子|パン)/, ''), level: 0 })) || []);  
           } else {
             alert('指定されたレシピが見つかりませんでした。');
           }
@@ -288,7 +291,7 @@ export default function RecipeForm({ recipeId, isEditMode = false }: RecipeFormP
           <div className="p-2 border rounded-md h-full">
             <TagSelectionGroup
               componentKey={`main-${recipeNumber}`}
-              pattern="素材別%"
+              patterns={mainPatterns} 
               onSelectionChange={setSelectedMainTags}
               suggestedTagNames={recipeDetails?.llmOutput.main_ingredients}
             />
@@ -301,7 +304,7 @@ export default function RecipeForm({ recipeId, isEditMode = false }: RecipeFormP
           <div className="p-2 border rounded-md h-full">
             <TagSelectionGroup
               componentKey={`cat-${recipeNumber}`}
-              pattern="料理%"
+              patterns={categoryPatterns}
               onSelectionChange={setSelectedCategoryTags}
               suggestedTagNames={recipeDetails?.llmOutput.categories}
             />
