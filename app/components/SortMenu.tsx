@@ -24,7 +24,6 @@ export default function SortMenu() {
   return (
     <div className="relative">
       <div className="flex items-center justify-around">
-        <span className="mr-2">つくれぽ数の</span>
         {sortOptions.map(({ sort, label }) => (
           <button
             key={sort}

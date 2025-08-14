@@ -134,6 +134,10 @@ async function callLLM(
     mainIngredientTags: string[],
     categoryTags: string[]
 ): Promise<LLMOutput> {
+  console.warn("LLM call is currently disabled. Returning dummy data.");
+
+  /*
+  // 元のLLM呼び出しロジック
   const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
   if (!GEMINI_API_KEY) {
     throw new Error("GEMINI_API_KEY environment variable is not set.");
@@ -152,7 +156,7 @@ async function callLLM(
     以下のレシピのテキストから、レシピの種類、主材料、カテゴリをJSON形式で抽出してください。
     レシピの種類は「main_dish」（例: カレー、ハンバーグ）、「side_dish」（例: サラダ、和え物）、「other」（例: 焼きそば、パスタ、丼物など、一品で完結する料理）のいずれかです。
     主材料とカテゴリは、提供されたタグのリストから厳密に選択し、その完全な名前（例: "素材別お肉牛肉"）でリストしてください。最も具体的なタグのみをリストしてください。親タグや抽象的なタグ（例: "料理"、"素材別"）は含めないでください。
-    
+
     利用可能な主材料タグ:
     ${JSON.stringify(mainIngredientTags, null, 2)}
 
@@ -161,9 +165,9 @@ async function callLLM(
 
     JSONスキーマは以下の通りです。
 
-    
+
     ${JSON.stringify(currentLLMSchema.shape, null, 2)}
-    
+
 
     レシピテキスト:
     ${textContent}
@@ -177,8 +181,6 @@ async function callLLM(
       responseMimeType: "application/json",
     },
   });
-
-  
 
   try {
     const response = await fetch(`${endpoint}?key=${GEMINI_API_KEY}`, {
@@ -196,16 +198,13 @@ async function callLLM(
     const data = await response.json();
     console.log("Gemini API Raw Response:", data);
 
-    // Assuming the response structure is data.candidates[0].content.parts[0].text
     const llmResponseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!llmResponseText) {
       throw new Error("Invalid response format from Gemini API: missing text content.");
     }
 
-    // Parse the JSON string returned by the LLM
     const parsedOutput = JSON.parse(llmResponseText);
 
-    // Validate with Zod schema
     const validatedOutput = currentLLMSchema.parse(parsedOutput);
     console.log("Gemini LLM Validated Output:", validatedOutput);
 
@@ -213,14 +212,16 @@ async function callLLM(
 
   } catch (error) {
     console.error("Error calling Gemini LLM:", error);
-    // Fallback to dummy data or re-throw based on desired error handling
-    return {
-      recipe_type: "other",
-      main_ingredients: [],
-      categories: [],
-    };
-    // throw error; // Uncomment to re-throw and propagate error
+    throw error; // エラーを再スロー
   }
+  */
+
+  // LLMが無効な場合のダミーデータ
+  return {
+    recipe_type: "other",
+    main_ingredients: [],
+    categories: [],
+  };
 }
 
 export interface RecipeDetails {
