@@ -56,6 +56,7 @@ export default function RecipeForm({ recipeId, isEditMode = false }: RecipeFormP
                 image: recipe.image,
                 tsukurepo: recipe.reposu_n?.toString() || '0',
                 author: recipe.author || '',
+                recipeid: recipe.id_n.toString(),
               },
               llmOutput: {
                 recipe_type: derivedRecipeType,

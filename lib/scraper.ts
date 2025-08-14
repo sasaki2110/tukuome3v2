@@ -45,6 +45,7 @@ export interface RecipeInfo {
   tsukurepo: string;
   image: string;
   author: string;
+  recipeid: string;
 }
 
 function extractRecipeInfo(dom: SerializableNode): RecipeInfo {
@@ -52,6 +53,7 @@ function extractRecipeInfo(dom: SerializableNode): RecipeInfo {
   let tsukurepo = '';
   let image = '';
   let author = '';
+  let recipeid = '';
 
   const findText = (node: SerializableNode): string => {
     if (!node) return '';
@@ -93,6 +95,14 @@ function extractRecipeInfo(dom: SerializableNode): RecipeInfo {
               author = node.attributes.title;
           }
       }
+
+      // 5. レシピID
+      if (node.tag === 'button' && node.attributes?.['data-clipboard-target'] === 'button' && node.attributes?.['data-action'] === 'clipboard#copy') {
+        const text = findText(node);
+        if (text.includes('レシピID:')) {
+          recipeid = text.replace('レシピID:', '').trim();
+        }
+      }
     }
 
     if (node.type === 'tag' && node.children) {
@@ -102,7 +112,7 @@ function extractRecipeInfo(dom: SerializableNode): RecipeInfo {
 
   traverse(dom);
 
-  return { title, tsukurepo, image, author };
+  return { title, tsukurepo, image, author, recipeid };
 }
 
 export async function scrapeUrl(url: string) {
