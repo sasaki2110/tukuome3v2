@@ -17,7 +17,8 @@ interface RecipeListWithLoadMoreProps {
   searchTag?: string;
   folderName?: string;
   searchRank?: string;
-  searchSort?: string; // 追加
+  searchSort?: string;
+  tagMode?: string; // 追加
 }
 
 export function RecipeListWithLoadMore({
@@ -29,7 +30,8 @@ export function RecipeListWithLoadMore({
   searchTag,
   folderName,
   searchRank,
-  searchSort, // 追加
+  searchSort,
+  tagMode, // 追加
 }: RecipeListWithLoadMoreProps) {
   const [recipes, setRecipes] = useState<Repo[]>(initialRecipes);
   const [, startTransition] = useTransition();
@@ -97,7 +99,8 @@ export function RecipeListWithLoadMore({
       searchTag,
       folderName,
       searchRank,
-      searchSort // searchSortを渡す
+      searchSort,
+      tagMode // tagModeを渡す
     );
     setRecipes((prevRecipes) => [...prevRecipes, ...newRecipes]);
     setOffset(nextOffset);

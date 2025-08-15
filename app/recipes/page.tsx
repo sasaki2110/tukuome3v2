@@ -10,7 +10,8 @@ interface RecipesPageProps {
     tag?: string | string[] | null;
     folder?: string | string[] | null;
     rank?: string | string[] | null;
-    sort?: string | string[] | null; // 追加
+    sort?: string | string[] | null;
+    tagmode?: string | string[] | null; // 追加
   }>;
 }
 
@@ -24,7 +25,8 @@ const RecipesPage = async ({ searchParams }: RecipesPageProps) => {
   const searchTag = isIdSearch ? '' : (Array.isArray(resolvedSearchParams?.tag) ? resolvedSearchParams.tag[0] : resolvedSearchParams?.tag || '');
   const folderName = isIdSearch ? '' : (Array.isArray(resolvedSearchParams?.folder) ? resolvedSearchParams.folder[0] : resolvedSearchParams?.folder || '');
   const searchRank = isIdSearch ? 'all' : (Array.isArray(resolvedSearchParams?.rank) ? resolvedSearchParams.rank[0] : resolvedSearchParams?.rank || 'all');
-  const searchSort = isIdSearch ? 'desc' : (Array.isArray(resolvedSearchParams?.sort) ? resolvedSearchParams.sort[0] : resolvedSearchParams?.sort || 'desc'); // searchSortを追加
+  const searchSort = isIdSearch ? 'desc' : (Array.isArray(resolvedSearchParams?.sort) ? resolvedSearchParams.sort[0] : resolvedSearchParams?.sort || 'desc');
+  const tagMode = isIdSearch ? '' : (Array.isArray(resolvedSearchParams?.tagmode) ? resolvedSearchParams.tagmode[0] : resolvedSearchParams?.tagmode || ''); // tagModeを追加
 
   const { recipes: initialRecipes, hasMore: initialHasMore } = await getFilteredRecipes(
     0,
@@ -34,7 +36,8 @@ const RecipesPage = async ({ searchParams }: RecipesPageProps) => {
     searchTag,
     folderName,
     searchRank,
-    searchSort // searchSortを渡す
+    searchSort,
+    tagMode // tagModeを渡す
   );
 
   return (
@@ -42,7 +45,7 @@ const RecipesPage = async ({ searchParams }: RecipesPageProps) => {
       <RecipeFilterControls />
       <div className="p-4 pt-[100px]">
         <RecipeListWithLoadMore
-          key={`${searchTerm}-${searchMode}-${searchTag}-${searchRank}-${searchSort}`} // keyにsearchSortを追加
+          key={`${searchTerm}-${searchMode}-${searchTag}-${searchRank}-${searchSort}-${tagMode}`} // keyにtagModeを追加
           initialRecipes={initialRecipes}
           initialOffset={0}
           initialHasMore={initialHasMore}
@@ -51,7 +54,8 @@ const RecipesPage = async ({ searchParams }: RecipesPageProps) => {
           searchTag={searchTag}
           folderName={folderName}
           searchRank={searchRank}
-          searchSort={searchSort} // searchSortを渡す
+          searchSort={searchSort}
+          tagMode={tagMode} // tagModeを渡す
         />
       </div>
     </>
