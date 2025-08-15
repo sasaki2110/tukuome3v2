@@ -27,6 +27,8 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
 
   const [isPending, startTransition] = useTransition();
   const [isAdding, startAddingTransition] = useTransition();
+  const [isUpdating, startUpdatingTransition] = useTransition();
+  const [isDeleting, startDeletingTransition] = useTransition();
   const [isReloading, startReloadingTransition] = useTransition();
   const [initialLoad, setInitialLoad] = useState(true);
 
@@ -170,7 +172,7 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
       return;
     }
 
-    startAddingTransition(async () => {
+    startDeletingTransition(async () => {
       try {
         await deleteRecipe(parseInt(recipeNumber, 10));
         alert('レシピが削除されました。');
@@ -216,7 +218,7 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
       return;
     }
 
-    startAddingTransition(async () => {
+    startUpdatingTransition(async () => {
       try {
         await updateRecipe({
           id_n: parseInt(recipeNumber, 10),
@@ -301,7 +303,9 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
             <label className="block text-sm font-medium">画像</label>
             <div className="p-2 border rounded-md bg-gray-100 h-50 w-50 relative">
               {scrapedInfo?.image && (
-                <Image src={scrapedInfo.image} alt={scrapedInfo.title || ''} layout="fill" objectFit="cover" />
+                <a href={`https://cookpad.com/jp/recipes/${recipeNumber}`} target="_blank" rel="noopener noreferrer">
+                  <Image src={scrapedInfo.image} alt={scrapedInfo.title || ''} layout="fill" objectFit="cover" />
+                </a>
               )}
             </div>
           </div>
@@ -396,11 +400,11 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
         <Button variant="outline" onClick={() => router.back()}>閉じる</Button>
         {isEditMode && (
           <>
-            <Button variant="destructive" onClick={handleDeleteRecipe} disabled={isAdding}>
-              {isAdding ? '削除中...' : 'レシピを削除'}
+            <Button variant="destructive" onClick={handleDeleteRecipe} disabled={isAdding || isUpdating || isDeleting}>
+              {isDeleting ? '削除中...' : 'レシピを削除'}
             </Button>
-            <Button onClick={handleUpdateRecipe} disabled={isAdding || !recipeDetails}>
-              {isAdding ? '更新中...' : 'レシピを更新'}
+            <Button onClick={handleUpdateRecipe} disabled={isAdding || isUpdating || isDeleting || !recipeDetails}>
+              {isUpdating ? '更新中...' : 'レシピを更新'}
             </Button>
           </>
         )}
