@@ -40,39 +40,45 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
     if (isEditMode && recipeId && initialLoad) {
       const fetchAndSetRecipe = async () => {
         try {
+          // 1. DBから基本情報を取得
           const { recipes } = await getRecipeById(parseInt(recipeId, 10));
-          if (recipes.length > 0) {
-            const recipe = recipes[0];
-            setRecipeNumber(recipe.id_n.toString());
-
-            let derivedRecipeType: 'main_dish' | 'side_dish' | 'other' = 'other';
-            if (recipe.ismain === 1) {
-              derivedRecipeType = 'main_dish';
-            } else if (recipe.issub === 1) {
-              derivedRecipeType = 'side_dish';
-            }
-            setRecipeDetails({
-              scrapedInfo: {
-                title: recipe.title,
-                image: recipe.image,
-                tsukurepo: recipe.reposu_n?.toString() || '0',
-                author: recipe.author || '',
-                recipeid: recipe.id_n.toString(),
-              },
-              llmOutput: {
-                recipe_type: derivedRecipeType,
-                main_ingredients: recipe.tags?.filter(tag => tag.startsWith('素材別')) || [],
-                categories: recipe.tags?.filter(tag => /^(料理|お菓子|パン)/.test(tag)) || [],
-              },
-
-            });
-            setIsMainChecked(recipe.ismain === 1);
-            setIsSubChecked(recipe.issub === 1);
-            setSelectedMainTags(recipe.tags?.filter(tag => tag.startsWith('素材別')).map(name => ({ id: 0, name, dispname: name.replace(/^(素材別|料理|お菓子|パン)/, ''), level: 0 })) || []);
-            setSelectedCategoryTags(recipe.tags?.filter(tag => /^(料理|お菓子|パン)/.test(tag)).map(name => ({ id: 0, name, dispname: name.replace(/^(素材別|料理|お菓子|パン)/, ''), level: 0 })) || []);  
-          } else {
+          if (recipes.length === 0) {
             alert('指定されたレシピが見つかりませんでした。');
+            setInitialLoad(false);
+            return;
           }
+          const recipe = recipes[0];
+          setRecipeNumber(recipe.id_n.toString());
+
+          // 2. スクレイピングで材料情報をバックグラウンド取得
+          const scrapedInfoForIngredients = await reScrapeRecipe(recipe.id_n.toString());
+
+          // 3. DB情報とスクレイピング情報をマージ
+          let derivedRecipeType: 'main_dish' | 'side_dish' | 'other' = 'other';
+          if (recipe.ismain === 1) derivedRecipeType = 'main_dish';
+          else if (recipe.issub === 1) derivedRecipeType = 'side_dish';
+
+          setRecipeDetails({
+            scrapedInfo: {
+              title: recipe.title,
+              image: recipe.image,
+              tsukurepo: recipe.reposu_n?.toString() || '0',
+              author: recipe.author || '',
+              recipeid: recipe.id_n.toString(),
+              ingredients: scrapedInfoForIngredients?.ingredients || [], // スクレイピング結果を反映
+            },
+            llmOutput: {
+              recipe_type: derivedRecipeType,
+              main_ingredients: recipe.tags?.filter(tag => tag.startsWith('素材別')) || [],
+              categories: recipe.tags?.filter(tag => /^(料理|お菓子|パン)/.test(tag)) || [],
+            },
+          });
+
+          setIsMainChecked(recipe.ismain === 1);
+          setIsSubChecked(recipe.issub === 1);
+          setSelectedMainTags(recipe.tags?.filter(tag => tag.startsWith('素材別')).map(name => ({ id: 0, name, dispname: name.replace(/^(素材別|料理|お菓子|パン)/, ''), level: 0 })) || []);
+          setSelectedCategoryTags(recipe.tags?.filter(tag => /^(料理|お菓子|パン)/.test(tag)).map(name => ({ id: 0, name, dispname: name.replace(/^(素材別|料理|お菓子|パン)/, ''), level: 0 })) || []);
+
         } catch (error) {
           console.error('Failed to fetch recipe for edit:', error);
           alert('レシピの読み込みに失敗しました。');
@@ -262,7 +268,7 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
 
   return (
     <div className="container mx-auto p-4">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pb-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pb-4">
         {/* Left Column */}
         <div className="md:col-span-1 space-y-4">
           <h2 className="text-lg font-semibold">レシピ情報</h2>
@@ -338,20 +344,40 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
           </div>
         </div>
 
-        {/* Center Column */}
+        {/* Ingredients Column */}
+        <div className="md:col-span-1">
+          <h2 className="text-lg font-semibold">材料</h2>
+          <div className="p-2 border rounded-md h-full overflow-y-auto">
+            {initialLoad ? (
+              <p className="text-sm text-gray-500">材料を読み込み中...</p>
+            ) : (
+              scrapedInfo?.ingredients && scrapedInfo.ingredients.length > 0 ? (
+                <ul className="space-y-2 text-sm">
+                  {scrapedInfo.ingredients.map((ingredient, index) => (
+                    <li key={index} className="break-words">{ingredient}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-gray-500">材料情報はありません。</p>
+              )
+            )}
+          </div>
+        </div>
+
+        {/* Main Ingredients Column */}
         <div className="md:col-span-1">
           <h2 className="text-lg font-semibold">主材料</h2>
           <div className="p-2 border rounded-md h-full">
             <TagSelectionGroup
               componentKey={`main-${recipeNumber}`}
-              patterns={mainPatterns} 
+              patterns={mainPatterns}
               onSelectionChange={setSelectedMainTags}
               suggestedTagNames={recipeDetails?.llmOutput.main_ingredients}
             />
           </div>
         </div>
 
-        {/* Right Column */}
+        {/* Category Column */}
         <div className="md:col-span-1">
           <h2 className="text-lg font-semibold">カテゴリ</h2>
           <div className="p-2 border rounded-md h-full">

@@ -46,6 +46,7 @@ export interface RecipeInfo {
   image: string;
   author: string;
   recipeid: string;
+  ingredients?: string[];
 }
 
 function extractRecipeInfo(dom: SerializableNode): RecipeInfo {
@@ -54,6 +55,7 @@ function extractRecipeInfo(dom: SerializableNode): RecipeInfo {
   let image = '';
   let author = '';
   let recipeid = '';
+  const ingredients: string[] = []; // 材料リストを格納する配列
 
   const findText = (node: SerializableNode): string => {
     if (!node) return '';
@@ -103,6 +105,14 @@ function extractRecipeInfo(dom: SerializableNode): RecipeInfo {
           recipeid = text.replace('レシピID:', '').trim();
         }
       }
+
+      // 6. 材料
+      if (node.tag === 'li' && node.attributes?.class?.includes('justified-quantity-and-name')) {
+        const ingredientText = findText(node).replace(/\s+/g, ' ').trim();
+        if (ingredientText) {
+          ingredients.push(ingredientText);
+        }
+      }
     }
 
     if (node.type === 'tag' && node.children) {
@@ -112,7 +122,7 @@ function extractRecipeInfo(dom: SerializableNode): RecipeInfo {
 
   traverse(dom);
 
-  return { title, tsukurepo, image, author, recipeid };
+  return { title, tsukurepo, image, author, recipeid, ingredients };
 }
 
 export async function scrapeUrl(url: string) {
