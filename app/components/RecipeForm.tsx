@@ -15,9 +15,10 @@ import { useRouter } from 'next/navigation';
 interface RecipeFormProps {
   recipeId?: string;
   isEditMode?: boolean;
+  searchParams?: { [key: string]: string | string[] | undefined };
 }
 
-export default function RecipeForm({ recipeId, isEditMode = false }: RecipeFormProps) {
+export default function RecipeForm({ recipeId, isEditMode = false, searchParams }: RecipeFormProps) {
   const router = useRouter();
   const [recipeNumber, setRecipeNumber] = useState('');
   const [recipeDetails, setRecipeDetails] = useState<RecipeDetails | null>(null);
@@ -167,7 +168,35 @@ export default function RecipeForm({ recipeId, isEditMode = false }: RecipeFormP
       try {
         await deleteRecipe(parseInt(recipeNumber, 10));
         alert('レシピが削除されました。');
-        router.push('/recipes');
+        if (isEditMode && searchParams) {
+          let finalParams;
+          if (searchParams.value && typeof searchParams.value === 'string') {
+            try {
+              finalParams = new URLSearchParams(JSON.parse(searchParams.value));
+            } catch (e) {
+              console.error("Failed to parse searchParams.value:", e);
+              const sanitizedParams: Record<string, string> = {};
+              for (const [key, value] of Object.entries(searchParams)) {
+                if (value !== undefined) {
+                  sanitizedParams[key] = String(value);
+                }
+              }
+              finalParams = new URLSearchParams(sanitizedParams);
+            }
+          } else {
+            const sanitizedParams: Record<string, string> = {};
+            for (const [key, value] of Object.entries(searchParams)) {
+              if (value !== undefined) {
+                sanitizedParams[key] = String(value);
+              }
+            }
+            finalParams = new URLSearchParams(sanitizedParams);
+          }
+          ['id', 'status', 'value', 'reason', '_debugInfo'].forEach(p => finalParams.delete(p));
+          router.push(`/recipes?${finalParams.toString()}`);
+        } else {
+          router.push('/recipes');
+        }
       } catch (error) {
         console.error('Failed to delete recipe:', error);
         alert('レシピの削除に失敗しました。');
@@ -178,10 +207,6 @@ export default function RecipeForm({ recipeId, isEditMode = false }: RecipeFormP
   const handleUpdateRecipe = () => {
     if (!recipeDetails || !scrapedInfo) {
       alert('更新するレシピ情報がありません。');
-      return;
-    }
-
-    if (!confirm('このレシピを更新します。よろしいですか？')) {
       return;
     }
 
@@ -196,8 +221,35 @@ export default function RecipeForm({ recipeId, isEditMode = false }: RecipeFormP
           isSub: isSubChecked ? 1 : 0,
           tags: allSelectedTags.map(tag => tag.name),
         });
-        alert('レシピが更新されました！');
-        router.push(`/recipes?title=${recipeNumber}`);
+        if (isEditMode && searchParams) {
+          let finalParams;
+          if (searchParams.value && typeof searchParams.value === 'string') {
+            try {
+              finalParams = new URLSearchParams(JSON.parse(searchParams.value));
+            } catch (e) {
+              console.error("Failed to parse searchParams.value:", e);
+              const sanitizedParams: Record<string, string> = {};
+              for (const [key, value] of Object.entries(searchParams)) {
+                if (value !== undefined) {
+                  sanitizedParams[key] = String(value);
+                }
+              }
+              finalParams = new URLSearchParams(sanitizedParams);
+            }
+          } else {
+            const sanitizedParams: Record<string, string> = {};
+            for (const [key, value] of Object.entries(searchParams)) {
+              if (value !== undefined) {
+                sanitizedParams[key] = String(value);
+              }
+            }
+            finalParams = new URLSearchParams(sanitizedParams);
+          }
+          ['id', 'status', 'value', 'reason', '_debugInfo'].forEach(p => finalParams.delete(p));
+          router.push(`/recipes?${finalParams.toString()}`);
+        } else {
+          router.push(`/recipes?title=${recipeNumber}`);
+        }
       } catch (error) {
         console.error('Failed to update recipe:', error);
         alert('レシピの更新に失敗しました。');

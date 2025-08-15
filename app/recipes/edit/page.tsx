@@ -1,6 +1,11 @@
 import RecipeForm from "@/app/components/RecipeForm";
 
-export default async function RecipeEditPage({ searchParams }: { searchParams: Promise<{ id?: string }> }) {
+type SearchParams = {
+  id?: string;
+  [key: string]: string | string[] | undefined;
+}
+
+export default async function RecipeEditPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const resolvedSearchParams = await searchParams;
   const recipeId = resolvedSearchParams.id;
 
@@ -8,5 +13,5 @@ export default async function RecipeEditPage({ searchParams }: { searchParams: P
     return <div>レシピIDが指定されていません。</div>;
   }
 
-  return <RecipeForm recipeId={recipeId} isEditMode={true} />;
+  return <RecipeForm recipeId={recipeId} isEditMode={true} searchParams={resolvedSearchParams} />;
 }

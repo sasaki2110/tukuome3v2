@@ -1,3 +1,4 @@
+"use client";
 import Image from 'next/image';
 import type { Repo } from '@/app/model/model';
 import { CommentDialog } from './CommentDialog'; // CommentDialogをインポート
@@ -5,6 +6,7 @@ import { useState } from 'react'; // useStateをインポート
 import { Star, Heart, MessageSquare } from 'lucide-react'; // Star, Heart, MessageSquareをインポート
 import LikeDialog from './LikeDialog'; // LikeDialogをインポート
 import Link from 'next/link'; // 追加
+import { useSearchParams } from 'next/navigation';
 
 
 type RecipeCardProps = {
@@ -15,6 +17,7 @@ type RecipeCardProps = {
 };
 
 const RecipeCard = ({ recipe, onRankChange, onCommentSubmit, onFolderClick }: RecipeCardProps) => {
+  const searchParams = useSearchParams();
   const [showCommentDialog, setShowCommentDialog] = useState(false); // コメントダイアログの表示状態
   const [showLikeDialog, setShowLikeDialog] = useState(false); // いいねダイアログの表示状態
 
@@ -49,6 +52,12 @@ const RecipeCard = ({ recipe, onRankChange, onCommentSubmit, onFolderClick }: Re
     setShowLikeDialog(false);
   };
 
+  const createEditLink = () => {
+    const params = new URLSearchParams(searchParams);
+    params.set('id', recipe.id_n.toString());
+    return `/recipes/edit?${params.toString()}`;
+  };
+
   return (
     <div className="border rounded-lg overflow-hidden shadow-lg flex flex-col h-full">
       {/* 画像とタイトルはaタグで囲み、詳細ページへのリンクとする */}
@@ -74,7 +83,7 @@ const RecipeCard = ({ recipe, onRankChange, onCommentSubmit, onFolderClick }: Re
       {/* 操作アイコンエリア */}
       <div className="p-3 flex justify-around items-center text-xl mt-auto border-t">
         {/* つくれぽ数 */}
-        <Link href={`/recipes/edit?id=${recipe.id_n}`} passHref>
+        <Link href={createEditLink()} passHref>
           <p className="text-sm text-gray-600 cursor-pointer hover:underline"> {/* Add cursor-pointer and hover:underline for visual feedback */}
             {formatLikes(recipe.reposu_n)}
           </p>
