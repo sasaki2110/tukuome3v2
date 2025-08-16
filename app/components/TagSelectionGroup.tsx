@@ -192,7 +192,7 @@ export default function TagSelectionGroup({ patterns, onSelectionChange, suggest
 
 
   return (
-    <Accordion type="multiple" className="w-full">
+    <Accordion type="multiple" className="w-full overflow-y-auto max-h-140">
       {tagTree.map(node => (
         <TagAccordionNode
           key={node.id} // Use node.id as key for top-level accordion items

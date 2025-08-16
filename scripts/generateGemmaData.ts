@@ -183,11 +183,20 @@ async function getSelectableTags(pattern: string): Promise<string[]> {
 }
 
 async function generateGemmaTrainingData() {
-  const limit = 10; // 最初の10件でテスト
-  const offset = 0;
+  const limit = 100; // 最初の10件でテスト
+  let offset = 0;
+  let hasMore = true;
+  const allRepos = []; // 全てのレシピを格納する配列
 
   console.log('レシピを取得中...');
-  const { repos } = await getRepos(USER_ID, limit, offset, 'all', 'all', 'desc', '');
+ 
+  while (hasMore) {
+    const { repos, hasMore: newHasMore } = await getRepos(USER_ID, limit, offset, 'all', 'all', 'desc', '');
+    allRepos.push(...repos);
+    hasMore = newHasMore;
+    offset += limit;
+    console.log(`${allRepos.length}件取得済み...`);
+  }
 
   console.log('選択可能な主材料タグを取得中...');
   const selectableMainIngredientTags = await getSelectableTags('素材別%');
@@ -197,9 +206,10 @@ async function generateGemmaTrainingData() {
   const selectableCategoryTags = await getSelectableTags('料理%');
   console.log('選択可能なカテゴリタグ:', selectableCategoryTags);
 
-  const trainingData: { text: string; label: string }[] = [];
+  //const trainingData: { text: string; label: string }[] = [];
+  const trainingData: { text: string }[] = [];
 
-  for (const repo of repos) {
+  for (const repo of allRepos) {
     // タグが未設定の場合はスキップ
     if (!repo.tags || repo.tags.length === 0) {
       console.log(`レシピ ${repo.id_n} はタグがないためスキップします。`);
@@ -214,8 +224,7 @@ async function generateGemmaTrainingData() {
       const scrapeResult = await scrapeUrl(`https://cookpad.com/jp/recipes/${repo.id_n}`);
       const title = scrapeResult.recipeInfo.title;
       const ingredients = scrapeResult.recipeInfo.ingredients?.join(' ') || '';
-      recipeBodyText = `(title)${title} (ingredientText)${ingredients}
-`;
+      recipeBodyText = `(title)${title} (ingredientText)${ingredients}`;
     } catch (error) {
       console.error(`レシピ ${repo.id_n} のスクレイピングに失敗しました:`, error);
       continue; // スクレイピング失敗時はスキップ
@@ -253,21 +262,20 @@ async function generateGemmaTrainingData() {
     // text文字列の構築
     const textString = `以下のレシピの分類を行ってください。
 
-n[選択肢]
-n- レシピ分類：主菜, 副菜, その他
-n- 主材料：${selectableMainIngredientTags.map(tag => tag.replace(/^素材別/, '')).join(', ')}
-n- カテゴリ：${selectableCategoryTags.map(tag => tag.replace(/^料理/, '')).join(', ')}
+  n[選択肢]
+  n- レシピ分類：主菜, 副菜, その他
+  n- 主材料：${selectableMainIngredientTags.map(tag => tag.replace(/^素材別/, '')).join(', ')}
+  n- カテゴリ：${selectableCategoryTags.map(tag => tag.replace(/^料理/, '')).join(', ')}
 
-[レシピ本文]
-${recipeBodyText}
-[回答]
-${labelString}`;
+  [レシピ本文]
+  ${recipeBodyText}
+  [回答]
+  ${labelString}`;
 
-    trainingData.push({ text: textString, label: labelString });
-
-    if (trainingData.length >= limit) {
-      break;
-    }
+    // Trainer で label がエラーになるため、label を除外
+    // ただし、label を含める場合は以下のようにする
+    //trainingData.push({ text: textString, label: labelString });
+    trainingData.push({ text: textString });
   }
 
   const outputPath = path.join(process.cwd(), 'public', 'me2gemini', 'learn.json');
