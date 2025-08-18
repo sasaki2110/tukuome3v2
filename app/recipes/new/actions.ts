@@ -1,7 +1,6 @@
 'use server';
 
 import { scrapeUrl, RecipeInfo } from '@/lib/scraper';
-import { z } from 'zod';
 import { getTagsByName } from '@/lib/services'; // getTagsByNameをインポート
 import { Tag } from '@/app/model/model'; // Tagをインポート
 import { getTagsFromLlm, ParsedLlmOutput } from '@/lib/servicesForLlm';
@@ -84,30 +83,6 @@ export async function getAllSelectableTagNames(): Promise<string[]> {
   traverseAndCollect(combinedTree);
 
   return selectableNames;
-}
-
-interface SerializableText {
-  type: 'text';
-  content: string;
-}
-
-interface SerializableElement {
-  type: 'tag';
-  tag: string;
-  attributes?: { [key: string]: string };
-  children?: (SerializableElement | SerializableText)[];
-}
-
-type SerializableNode = SerializableElement | SerializableText | null;
-
-// カスタムDOMオブジェクトをフラットなテキスト文字列に変換するヘルパー関数
-function domToText(node: SerializableNode): string {
-  if (!node) return '';
-  if (node.type === 'text') return node.content || '';
-  if (node.type === 'tag' && node.children) {
-    return node.children.map(domToText).join(' ');
-  }
-  return '';
 }
 
 export interface RecipeDetails {

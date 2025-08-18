@@ -188,7 +188,6 @@ export default function TagSelectionGroup({ patterns, onSelectionChange, suggest
     }
   }, [suggestedTagNames, allTags, tagTree, onSelectionChange, patternForLog]);
 
-
   return (
     <Accordion type="multiple" className="w-full overflow-y-auto max-h-140">
       {tagTree.map(node => (
