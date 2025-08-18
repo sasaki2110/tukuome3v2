@@ -182,11 +182,9 @@ export default function TagSelectionGroup({ patterns, onSelectionChange, suggest
       );
       setSelectedTags(suggested);
       onSelectionChange(suggested);
-      console.log(`TagSelectionGroup (${patternForLog}): pre-selected tags=`, suggested);
     } else {
       setSelectedTags([]); // Clear selection if no suggestions
       onSelectionChange([]);
-      console.log(`TagSelectionGroup (${patternForLog}): No suggestions or empty, clearing selection.`);
     }
   }, [suggestedTagNames, allTags, tagTree, onSelectionChange, patternForLog]);
 

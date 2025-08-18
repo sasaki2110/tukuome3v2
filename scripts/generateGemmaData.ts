@@ -210,6 +210,12 @@ async function generateGemmaTrainingData() {
   const trainingData: { text: string }[] = [];
 
   for (const repo of allRepos) {
+    // trainingDataの件数が100件に達したらループを抜ける
+    //if (trainingData.length >= 100) {
+    //  console.log('学習データが100件に達したため、処理を中断します。');
+    //  break;
+    //}
+
     // タグが未設定の場合はスキップ
     if (!repo.tags || repo.tags.length === 0) {
       console.log(`レシピ ${repo.id_n} はタグがないためスキップします。`);
@@ -261,11 +267,6 @@ async function generateGemmaTrainingData() {
 
     // text文字列の構築
     const textString = `以下のレシピの分類を行ってください。
-
-  n[選択肢]
-  n- レシピ分類：主菜, 副菜, その他
-  n- 主材料：${selectableMainIngredientTags.map(tag => tag.replace(/^素材別/, '')).join(', ')}
-  n- カテゴリ：${selectableCategoryTags.map(tag => tag.replace(/^料理/, '')).join(', ')}
 
   [レシピ本文]
   ${recipeBodyText}

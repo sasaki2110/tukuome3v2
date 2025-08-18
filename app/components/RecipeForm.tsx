@@ -52,35 +52,52 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
           const recipe = recipes[0];
           setRecipeNumber(recipe.id_n.toString());
 
-          // 2. スクレイピングで材料情報をバックグラウンド取得
-          const scrapedInfoForIngredients = await reScrapeRecipe(recipe.id_n.toString());
+          // 2. タグの有無をチェック
+          if (recipe.tags && recipe.tags.length > 0) {
+            // タグがある場合：既存のデータを表示
+            const scrapedInfoForIngredients = await reScrapeRecipe(recipe.id_n.toString());
+            setRecipeDetails({
+              scrapedInfo: {
+                title: recipe.title,
+                image: recipe.image,
+                tsukurepo: recipe.reposu_n?.toString() || '0',
+                author: recipe.author || '',
+                recipeid: recipe.id_n.toString(),
+                ingredients: scrapedInfoForIngredients?.ingredients || [],
+              },
+              llmOutput: {
+                isMain: recipe.ismain === 1,
+                isSub: recipe.issub === 1,
+                tags: recipe.tags,
+              },
+            });
+            setIsMainChecked(recipe.ismain === 1);
+            setIsSubChecked(recipe.issub === 1);
+            setSelectedMainTags(recipe.tags?.filter(tag => tag.startsWith('素材別')).map(name => ({ id: 0, name, dispname: name.replace(/^(素材別|料理|お菓子|パン)/, ''), level: 0 })) || []);
+            setSelectedCategoryTags(recipe.tags?.filter(tag => /^(料理|お菓子|パン)/.test(tag)).map(name => ({ id: 0, name, dispname: name.replace(/^(素材別|料理|お菓子|パン)/, ''), level: 0 })) || []);
 
-          // 3. DB情報とスクレイピング情報をマージ
-          let derivedRecipeType: 'main_dish' | 'side_dish' | 'other' = 'other';
-          if (recipe.ismain === 1) derivedRecipeType = 'main_dish';
-          else if (recipe.issub === 1) derivedRecipeType = 'side_dish';
-
-          setRecipeDetails({
-            scrapedInfo: {
-              title: recipe.title,
-              image: recipe.image,
-              tsukurepo: recipe.reposu_n?.toString() || '0',
-              author: recipe.author || '',
-              recipeid: recipe.id_n.toString(),
-              ingredients: scrapedInfoForIngredients?.ingredients || [], // スクレイピング結果を反映
-            },
-            llmOutput: {
-              recipe_type: derivedRecipeType,
-              main_ingredients: recipe.tags?.filter(tag => tag.startsWith('素材別')) || [],
-              categories: recipe.tags?.filter(tag => /^(料理|お菓子|パン)/.test(tag)) || [],
-            },
-          });
-
-          setIsMainChecked(recipe.ismain === 1);
-          setIsSubChecked(recipe.issub === 1);
-          setSelectedMainTags(recipe.tags?.filter(tag => tag.startsWith('素材別')).map(name => ({ id: 0, name, dispname: name.replace(/^(素材別|料理|お菓子|パン)/, ''), level: 0 })) || []);
-          setSelectedCategoryTags(recipe.tags?.filter(tag => /^(料理|お菓子|パン)/.test(tag)).map(name => ({ id: 0, name, dispname: name.replace(/^(素材別|料理|お菓子|パン)/, ''), level: 0 })) || []);
-
+          } else {
+            // タグがない場合：LLMで推論
+            const details = await getRecipeDetailsFromUrl(recipe.id_n.toString());
+            setRecipeDetails(details);
+            if (details?.llmOutput) {
+              const { isMain, isSub, tags } = details.llmOutput;
+              setIsMainChecked(isMain);
+              setIsSubChecked(isSub);
+              // SuggestionのためにllmOutputを更新する
+              setRecipeDetails(prevDetails => {
+                if (!prevDetails) return null;
+                return {
+                  ...prevDetails,
+                  llmOutput: {
+                    ...prevDetails.llmOutput,
+                    main_ingredients: tags.filter(t => t.startsWith('素材別')),
+                    categories: tags.filter(t => /^(料理|お菓子|パン)/.test(t)),
+                  }
+                }
+              });
+            }
+          }
         } catch (error) {
           console.error('Failed to fetch recipe for edit:', error);
           alert('レシピの読み込みに失敗しました。');
@@ -98,10 +115,22 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
     startTransition(async () => {
       const details = await getRecipeDetailsFromUrl(recipeNumber);
       setRecipeDetails(details);
-      if (details?.llmOutput.recipe_type) {
-        const llmRecipeType = details.llmOutput.recipe_type;
-        setIsMainChecked(llmRecipeType === 'main_dish');
-        setIsSubChecked(llmRecipeType === 'side_dish');
+      if (details?.llmOutput) {
+        const { isMain, isSub, tags } = details.llmOutput;
+        setIsMainChecked(isMain);
+        setIsSubChecked(isSub);
+        // SuggestionのためにllmOutputを更新する
+        setRecipeDetails(prevDetails => {
+          if (!prevDetails) return null;
+          return {
+            ...prevDetails,
+            llmOutput: {
+              ...prevDetails.llmOutput,
+              main_ingredients: tags.filter(t => t.startsWith('素材別')),
+              categories: tags.filter(t => /^(料理|お菓子|パン)/.test(t)),
+            }
+          }
+        });
       }
       if (!details) {
         alert('指定のレシピが存在しないようです。レシピ番号を確認してください。');
@@ -383,7 +412,7 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
               componentKey={`main-${recipeNumber}`}
               patterns={mainPatterns}
               onSelectionChange={setSelectedMainTags}
-              suggestedTagNames={recipeDetails?.llmOutput.main_ingredients}
+              suggestedTagNames={useMemo(() => recipeDetails?.llmOutput.tags?.filter(tag => tag.startsWith('素材別')), [recipeDetails])}
             />
           </div>
         </div>
@@ -396,7 +425,7 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
               componentKey={`cat-${recipeNumber}`}
               patterns={categoryPatterns}
               onSelectionChange={setSelectedCategoryTags}
-              suggestedTagNames={recipeDetails?.llmOutput.categories}
+              suggestedTagNames={useMemo(() => recipeDetails?.llmOutput.tags?.filter(tag => /^(料理|お菓子|パン)/.test(tag)), [recipeDetails])}
             />
           </div>
         </div>

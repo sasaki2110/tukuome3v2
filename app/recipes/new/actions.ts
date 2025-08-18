@@ -2,74 +2,74 @@
 
 import { scrapeUrl, RecipeInfo } from '@/lib/scraper';
 import { z } from 'zod';
-import { getTagsByName } from '@/lib/services'; // Import getTagsByName
-import { Tag } from '@/app/model/model'; // Import Tag
+import { getTagsByName } from '@/lib/services'; // getTagsByNameをインポート
+import { Tag } from '@/app/model/model'; // Tagをインポート
+import { getTagsFromLlm, ParsedLlmOutput } from '@/lib/servicesForLlm';
 
-// Define a recursive TagNode interface (copied from TagSelectionGroup for reuse)
+// 再帰的なTagNodeインターフェースを定義（TagSelectionGroupから再利用）
 interface TagNode extends Tag {
   children: TagNode[];
-  isSelectable: boolean; // True if it's a leaf node (no children)
+  isSelectable: boolean; // 子ノードを持たないリーフノードの場合はtrue
 }
 
-// Helper function to build the hierarchical tag tree (copied from TagSelectionGroup for reuse)
+// 階層的なタグツリーを構築するヘルパー関数（TagSelectionGroupから再利用）
 const buildTagTree = (tags: Tag[], pattern: string): TagNode[] => {
   const nodes: Record<string, TagNode> = {};
   const rootNodes: TagNode[] = [];
-  const patternBase = pattern.replace(/%/g, ''); // e.g., "素材別" or "料理"
+  const patternBase = pattern.replace(/%/g, ''); // 例: "素材別" or "料理"
 
-  // First pass: Create all nodes and map them by their full name
+  // 第1パス: 全てのノードを作成し、完全な名前でマッピングする
   tags.forEach(tag => {
     nodes[tag.name] = { ...tag, children: [], isSelectable: true };
   });
 
-  // Second pass: Build the hierarchy
+  // 第2パス: 階層を構築する
   tags.forEach(tag => {
     const currentNode = nodes[tag.name];
 
-    // Determine potential parent name by removing the current tag's dispname from its full name
-    // This assumes dispname is the last part of the name
+    // 現在のタグのdispnameを完全な名前から削除して、親の可能性のある名前を決定する
+    // dispnameが名前の最後の部分であることを前提とする
     const potentialParentName = tag.name.substring(0, tag.name.length - tag.dispname.length);
 
-    // If a potential parent exists and is in our nodes map
+    // 親の可能性のあるノードが存在し、それがノードマップにあれば
     if (potentialParentName && nodes[potentialParentName]) {
       const parentNode = nodes[potentialParentName];
       parentNode.children.push(currentNode);
-      parentNode.isSelectable = false; // A node with children is not selectable itself
+      parentNode.isSelectable = false; // 子を持つノードは選択不可
     } else {
-      // If no parent found, it's a potential root node.
-      // Only add to rootNodes if it starts with the patternBase and is not a child of another node
-      // (This filtering will be done in the third pass)
+      // 親が見つからない場合は、ルートノードの可能性がある
+      // 第3パスでフィルタリングされる
       rootNodes.push(currentNode);
     }
   });
 
-  // Third pass: Filter out nodes that are children of other nodes, and ensure they match the pattern
+  // 第3パス: 他のノードの子であるノードを除外し、パターンに一致することを確認する
   const finalRootNodes = rootNodes.filter(node => {
-    // A node is a true root if it's not a child of any other node AND it matches the pattern
+    // 他のノードの子ではなく、かつパターンに一致する場合に真のルートノードとなる
     const isChildOfAnotherNode = Object.values(nodes).some(otherNode =>
       otherNode.children.includes(node)
     );
     return !isChildOfAnotherNode && node.name.startsWith(patternBase);
   });
 
-  // Sort children for consistent display
+  // 表示の一貫性のために子をソートする
   Object.values(nodes).forEach(node => {
     node.children.sort((a, b) => a.id - b.id);
   });
 
-  // Sort final root nodes
+  // 最終的なルートノードをソートする
   return finalRootNodes.sort((a, b) => a.id - b.id);
 };
 
-// New function to get all selectable tag names
+// 選択可能な全てのタグ名を取得する新しい関数
 export async function getAllSelectableTagNames(): Promise<string[]> {
   const mainIngredientTags = await getTagsByName("素材別%");
   const categoryTags = await getTagsByName("料理%");
 
   const allTags = [...mainIngredientTags, ...categoryTags];
 
-  // Build a combined tree and extract selectable nodes
-  const combinedTree = buildTagTree(allTags, ""); // Use empty pattern to get all roots
+  // 結合されたツリーを構築し、選択可能なノードを抽出する
+  const combinedTree = buildTagTree(allTags, ""); // 全てのルートを取得するために空のパターンを使用
 
   const selectableNames: string[] = [];
   const traverseAndCollect = (nodes: TagNode[]) => {
@@ -100,7 +100,7 @@ interface SerializableElement {
 
 type SerializableNode = SerializableElement | SerializableText | null;
 
-// Helper function to convert the custom DOM object to a flat text string
+// カスタムDOMオブジェクトをフラットなテキスト文字列に変換するヘルパー関数
 function domToText(node: SerializableNode): string {
   if (!node) return '';
   if (node.type === 'text') return node.content || '';
@@ -110,128 +110,14 @@ function domToText(node: SerializableNode): string {
   return '';
 }
 
-// Zod schema for the LLM output, based on the user-provided sample
-const createLLMSchema = (mainIngredientTags: string[], categoryTags: string[]) => {
-    // Ensure tags are not empty, otherwise Zod throws an error.
-    const safeMainIngredientTags = mainIngredientTags.length > 0 ? mainIngredientTags : ["dummy_ingredient"];
-    const safeCategoryTags = categoryTags.length > 0 ? categoryTags : ["dummy_category"];
-
-    return z.object({
-        recipe_type: z.enum(["main_dish", "side_dish", "other"]),
-
-
-        main_ingredients: z.array(z.enum(safeMainIngredientTags as [string, ...string[]])),
-        categories: z.array(z.enum(safeCategoryTags as [string, ...string[]])),
-    });
-};
-
-
-type LLMOutput = z.infer<ReturnType<typeof createLLMSchema>>;
-
-// Actual LLM call using Gemini API
-async function callLLM(
-    textContent: string,
-    mainIngredientTags: string[],
-    categoryTags: string[]
-): Promise<LLMOutput> {
-  console.warn("LLM call is currently disabled. Returning dummy data.");
-
-  /*
-  // 元のLLM呼び出しロジック
-  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-  if (!GEMINI_API_KEY) {
-    throw new Error("GEMINI_API_KEY environment variable is not set.");
-  }
-
-  const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent";
-//  const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
-  const headers = {
-    "Content-Type": "application/json",
-  };
-
-  // Dynamically create LLMSchema based on provided tags
-  const currentLLMSchema = createLLMSchema(mainIngredientTags, categoryTags);
-
-  const prompt = `
-    以下のレシピのテキストから、レシピの種類、主材料、カテゴリをJSON形式で抽出してください。
-    レシピの種類は「main_dish」（例: カレー、ハンバーグ）、「side_dish」（例: サラダ、和え物）、「other」（例: 焼きそば、パスタ、丼物など、一品で完結する料理）のいずれかです。
-    主材料とカテゴリは、提供されたタグのリストから厳密に選択し、その完全な名前（例: "素材別お肉牛肉"）でリストしてください。最も具体的なタグのみをリストしてください。親タグや抽象的なタグ（例: "料理"、"素材別"）は含めないでください。
-
-    利用可能な主材料タグ:
-    ${JSON.stringify(mainIngredientTags, null, 2)}
-
-    利用可能なカテゴリタグ:
-    ${JSON.stringify(categoryTags, null, 2)}
-
-    JSONスキーマは以下の通りです。
-
-
-    ${JSON.stringify(currentLLMSchema.shape, null, 2)}
-
-
-    レシピテキスト:
-    ${textContent}
-  `;
-
-  const body = JSON.stringify({
-    contents: [{
-      parts: [{ text: prompt }]
-    }],
-    generationConfig: {
-      responseMimeType: "application/json",
-    },
-  });
-
-  try {
-    const response = await fetch(`${endpoint}?key=${GEMINI_API_KEY}`, {
-      method: "POST",
-      headers: headers,
-      body: body,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Gemini API error: ${response.status} - ${errorText}`);
-      throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
-    }
-
-    const data = await response.json();
-    console.log("Gemini API Raw Response:", data);
-
-    const llmResponseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!llmResponseText) {
-      throw new Error("Invalid response format from Gemini API: missing text content.");
-    }
-
-    const parsedOutput = JSON.parse(llmResponseText);
-
-    const validatedOutput = currentLLMSchema.parse(parsedOutput);
-    console.log("Gemini LLM Validated Output:", validatedOutput);
-
-    return validatedOutput;
-
-  } catch (error) {
-    console.error("Error calling Gemini LLM:", error);
-    throw error; // エラーを再スロー
-  }
-  */
-
-  // LLMが無効な場合のダミーデータ
-  return {
-    recipe_type: "other",
-    main_ingredients: [],
-    categories: [],
-  };
-}
-
 export interface RecipeDetails {
   scrapedInfo: RecipeInfo;
-  llmOutput: LLMOutput;
+  llmOutput: ParsedLlmOutput;
 }
 
 export async function getRecipeDetailsFromUrl(recipeNumber: string): Promise<RecipeDetails | null> {
   if (!recipeNumber || !/^[0-9]+$/.test(recipeNumber)) {
-    console.error("Invalid recipe number");
+    console.error("無効なレシピ番号です");
     return null;
   }
 
@@ -243,29 +129,17 @@ export async function getRecipeDetailsFromUrl(recipeNumber: string): Promise<Rec
       return null;
     }
 
-    const { dom, recipeInfo } = scrapeResult;
+    const { recipeInfo } = scrapeResult;
 
-    // Convert the DOM to text for the LLM
-    const textContent = domToText(dom);
-
-    // Get all selectable main ingredient tags and category tags
-    const mainIngredientTags = await getTagsByName("素材別%");
-    const categoryTags = await getTagsByName("料理%");
-
-    const mainIngredientTagNames = mainIngredientTags.map(tag => tag.name);
-    const categoryTagNames = categoryTags.map(tag => tag.name);
-
-    
-
-    // Call the LLM to get structured data
-    const llmOutput = await callLLM(textContent, mainIngredientTagNames, categoryTagNames);
+    // 新しいLLMサービスを呼び出して構造化データを取得する
+    const llmOutput = await getTagsFromLlm(recipeInfo.title, recipeInfo.ingredients || []);
 
     return {
       scrapedInfo: recipeInfo,
       llmOutput: llmOutput,
     };
   } catch (error) {
-    console.error(`Failed to process recipe ${recipeNumber}:`, error);
+    console.error(`レシピ ${recipeNumber} の処理に失敗しました:`, error);
     return null;
   }
 }
