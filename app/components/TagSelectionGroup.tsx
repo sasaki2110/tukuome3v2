@@ -19,9 +19,10 @@ interface TagNode extends Tag {
 
 interface TagSelectionGroupProps {
   patterns: string[];
+  selectedTags: Tag[]; // The source of truth for selected tags
   onSelectionChange: (selectedTags: Tag[]) => void;
-  suggestedTagNames?: string[];
-  componentKey?: string; // To force re-render when suggestions change
+  suggestedTagNames?: string[]; // To pre-select tags based on suggestions
+  componentKey?: string; // To force re-render when other states change
 }
 
 // Helper function to build the hierarchical tag tree
@@ -38,18 +39,12 @@ const buildTagTree = (tags: Tag[], patterns: string[]): TagNode[] => {
   // Second pass: Build the hierarchy
   tags.forEach(tag => {
     const currentNode = nodes[tag.name];
-
-    // Determine potential parent name by removing the current tag's dispname from its full name
-    // This assumes dispname is the last part of the name
     const potentialParentName = tag.name.substring(0, tag.name.length - tag.dispname.length);
-
-    // If a potential parent exists and is in our nodes map
     if (potentialParentName && nodes[potentialParentName]) {
       const parentNode = nodes[potentialParentName];
       parentNode.children.push(currentNode);
-      parentNode.isSelectable = false; // A node with children is not selectable itself
+      parentNode.isSelectable = false;
     } else {
-      // If no parent found, it's a potential root node.
       rootNodes.push(currentNode);
     }
   });
@@ -59,16 +54,10 @@ const buildTagTree = (tags: Tag[], patterns: string[]): TagNode[] => {
     const isChildOfAnotherNode = Object.values(nodes).some(otherNode =>
       otherNode.children.includes(node)
     );
-    // A node is a true root if it's not a child and its name starts with one of the pattern bases.
     return !isChildOfAnotherNode && patternBases.some(base => node.name.startsWith(base));
   });
 
-  // Sort children for consistent display
-  Object.values(nodes).forEach(node => {
-    node.children.sort((a, b) => a.id - b.id);
-  });
-
-  // Sort final root nodes
+  Object.values(nodes).forEach(node => node.children.sort((a, b) => a.id - b.id));
   return finalRootNodes.sort((a, b) => a.id - b.id);
 };
 
@@ -82,19 +71,17 @@ interface TagAccordionNodeProps {
 
 const TagAccordionNode: React.FC<TagAccordionNodeProps> = ({ node, selectedTags, onTagSelection }) => {
   if (node.isSelectable) {
-    // Render as a checkbox if it's a leaf node
     return (
       <div key={node.id} className="flex items-center space-x-2">
         <Checkbox
           id={`tag-${node.id}`}
           onCheckedChange={(checked) => onTagSelection(node, !!checked)}
-          checked={selectedTags.some(t => t.id === node.id)}
+          checked={selectedTags.some(t => t.name === node.name)}
         />
         <label htmlFor={`tag-${node.id}`}>{node.dispname}</label>
       </div>
     );
   } else {
-    // Render as an accordion item if it has children
     return (
       <AccordionItem value={node.name} key={node.name}>
         <AccordionTrigger>{node.dispname}</AccordionTrigger>
@@ -116,83 +103,68 @@ const TagAccordionNode: React.FC<TagAccordionNodeProps> = ({ node, selectedTags,
 };
 
 
-export default function TagSelectionGroup({ patterns, onSelectionChange, suggestedTagNames, componentKey }: TagSelectionGroupProps) {
-  const patternForLog = patterns.join(',');
-  console.log(`TagSelectionGroup: patterns=${patternForLog}, componentKey=${componentKey}, suggestedTagNames=`, suggestedTagNames);
+export default function TagSelectionGroup({ patterns, selectedTags, onSelectionChange, suggestedTagNames, componentKey }: TagSelectionGroupProps) {
   const [allTags, setAllTags] = useState<Tag[]>([]);
-  const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const [tagTree, setTagTree] = useState<TagNode[]>([]);
 
-  // Memoized callback for handling tag selection changes
   const handleTagSelection = useCallback((tag: Tag, checked: boolean) => {
     let newSelectedTags;
     if (checked) {
       newSelectedTags = [...selectedTags, tag];
     } else {
-      newSelectedTags = selectedTags.filter((t) => t.id !== tag.id);
+      newSelectedTags = selectedTags.filter((t) => t.name !== tag.name);
     }
-    setSelectedTags(newSelectedTags);
     onSelectionChange(newSelectedTags);
-    console.log(`TagSelectionGroup (${patternForLog}): handleTagSelection - newSelectedTags=`, newSelectedTags);
-  }, [selectedTags, onSelectionChange, patternForLog]);
+  }, [selectedTags, onSelectionChange]);
 
 
   useEffect(() => {
     async function fetchAndProcessTags() {
-      let allFetchedTags: Tag[] = [];
+      const fetched: Tag[] = [];
       for (const p of patterns) {
-        const fetchedTags = await getTagsByName(p);
-        allFetchedTags.push(...fetchedTags);
+        fetched.push(...await getTagsByName(p));
       }
-      // Remove duplicates
-      allFetchedTags = allFetchedTags.filter((tag, index, self) =>
-        index === self.findIndex((t) => t.id === tag.id)
-      );
-
-      setAllTags(allFetchedTags);
-      console.log(`TagSelectionGroup (${patternForLog}): fetchedTags=`, allFetchedTags);
-
-      const tree = buildTagTree(allFetchedTags, patterns);
-      setTagTree(tree);
-      console.log(`TagSelectionGroup (${patternForLog}): tagTree=`, tree);
+      const uniqueTags = fetched.filter((tag, index, self) => index === self.findIndex((t) => t.id === tag.id));
+      setAllTags(uniqueTags);
+      setTagTree(buildTagTree(uniqueTags, patterns));
     }
     fetchAndProcessTags();
   }, [patterns, componentKey]);
 
   useEffect(() => {
-    if (allTags.length === 0) return;
+    // Wait until tags are fetched and suggestions are provided
+    if (allTags.length === 0 || !suggestedTagNames) {
+      return;
+    }
 
-    // Create a flat list of all selectable tag names from the built tree
+    // Filter suggested tags to only include valid, selectable tags
     const allSelectableTagNames: string[] = [];
-    const traverseAndCollectSelectable = (nodes: TagNode[]) => {
+    const traverse = (nodes: TagNode[]) => {
       nodes.forEach(node => {
         if (node.isSelectable) {
           allSelectableTagNames.push(node.name);
         } else {
-          traverseAndCollectSelectable(node.children);
+          traverse(node.children);
         }
       });
     };
-    traverseAndCollectSelectable(tagTree);
+    traverse(tagTree);
 
-    // Pre-select tags based on suggestions, ensuring they are selectable leaf nodes
-    if (suggestedTagNames && suggestedTagNames.length > 0) {
-      const suggested = allTags.filter(t =>
-        suggestedTagNames.includes(t.name) && allSelectableTagNames.includes(t.name)
-      );
-      setSelectedTags(suggested);
-      onSelectionChange(suggested);
-    } else {
-      setSelectedTags([]); // Clear selection if no suggestions
-      onSelectionChange([]);
-    }
-  }, [suggestedTagNames, allTags, tagTree, onSelectionChange, patternForLog]);
+    const validSuggestedTags = allTags.filter(tag =>
+      suggestedTagNames.includes(tag.name) && allSelectableTagNames.includes(tag.name)
+    );
+
+    // Notify parent component about the valid suggested tags
+    // This will become the new selection
+    onSelectionChange(validSuggestedTags);
+
+  }, [allTags, tagTree, suggestedTagNames, onSelectionChange]);
 
   return (
     <Accordion type="multiple" className="w-full overflow-y-auto max-h-140">
       {tagTree.map(node => (
         <TagAccordionNode
-          key={node.id} // Use node.id as key for top-level accordion items
+          key={node.id}
           node={node}
           selectedTags={selectedTags}
           onTagSelection={handleTagSelection}

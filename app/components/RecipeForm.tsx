@@ -84,6 +84,7 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
               const { isMain, isSub, tags } = details.llmOutput;
               setIsMainChecked(isMain);
               setIsSubChecked(isSub);
+
               // SuggestionのためにllmOutputを更新する
               setRecipeDetails(prevDetails => {
                 if (!prevDetails) return null;
@@ -294,6 +295,11 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
     });
   };
 
+  const handleRemoveTag = (tagName: string) => {
+    setSelectedMainTags(prevTags => prevTags.filter(tag => tag.name !== tagName));
+    setSelectedCategoryTags(prevTags => prevTags.filter(tag => tag.name !== tagName));
+  };
+
   const allSelectedTags = [...selectedMainTags, ...selectedCategoryTags];
   const scrapedInfo = recipeDetails?.scrapedInfo;
 
@@ -369,7 +375,11 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
             <label className="block text-sm font-medium">選択中のタグ</label>
             <div className="p-2 border rounded-md bg-gray-100 min-h-[4rem] flex flex-wrap gap-2">
               {allSelectedTags.map(tag => (
-                <span key={tag.name} className="bg-gray-200 text-gray-800 px-2 py-1 rounded-full text-sm">
+                <span
+                  key={tag.name}
+                  className="bg-gray-200 text-gray-800 px-2 py-1 rounded-full text-sm cursor-pointer hover:bg-gray-300"
+                  onClick={() => handleRemoveTag(tag.name)}
+                >
                   {tag.name}
                 </span>
               ))}
@@ -411,8 +421,9 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
             <TagSelectionGroup
               componentKey={`main-${recipeNumber}`}
               patterns={mainPatterns}
+              selectedTags={selectedMainTags}
               onSelectionChange={setSelectedMainTags}
-              suggestedTagNames={useMemo(() => recipeDetails?.llmOutput.tags?.filter(tag => tag.startsWith('素材別')), [recipeDetails])}
+              suggestedTagNames={recipeDetails?.llmOutput?.tags}
             />
           </div>
         </div>
@@ -424,8 +435,9 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
             <TagSelectionGroup
               componentKey={`cat-${recipeNumber}`}
               patterns={categoryPatterns}
+              selectedTags={selectedCategoryTags}
               onSelectionChange={setSelectedCategoryTags}
-              suggestedTagNames={useMemo(() => recipeDetails?.llmOutput.tags?.filter(tag => /^(料理|お菓子|パン)/.test(tag)), [recipeDetails])}
+              suggestedTagNames={recipeDetails?.llmOutput?.tags}
             />
           </div>
         </div>
