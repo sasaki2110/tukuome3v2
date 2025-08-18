@@ -304,9 +304,9 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
   const scrapedInfo = recipeDetails?.scrapedInfo;
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pb-4">
-        {/* Left Column */}
+    <div className="p-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 pb-4">
+        {/* 1st Column */}
         <div className="md:col-span-1 space-y-4">
           <h2 className="text-lg font-semibold">レシピ情報</h2>
           <div className="flex items-center space-x-2">
@@ -350,6 +350,10 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
               {scrapedInfo?.tsukurepo}
             </p>
           </div>
+        </div>
+
+        {/* 2nd Column */}
+        <div className="md:col-span-1 space-y-4 pt-9">
           <div>
             <label className="block text-sm font-medium">種類</label>
             <div className="flex items-center space-x-4">
@@ -396,7 +400,7 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
                 {isUpdating ? '更新中...' : 'レシピを更新'}
               </Button>
             </>
-          )}          
+          )}
         </div>
 
         {/* Ingredients Column */}
