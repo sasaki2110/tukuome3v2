@@ -385,6 +385,11 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
               ))}
             </div>
           </div>
+          {!isEditMode && (
+            <Button onClick={handleSubmitRecipe} disabled={isAdding || !recipeDetails}>
+              {isAdding ? '追加中...' : 'レシピを追加'}
+            </Button>
+          )}
           {isEditMode && (
             <>
               <Button onClick={handleUpdateRecipe} disabled={isAdding || isUpdating || isDeleting || !recipeDetails}>
@@ -452,11 +457,6 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
               {isDeleting ? '削除中...' : 'レシピを削除'}
             </Button>
           </>
-        )}
-        {!isEditMode && (
-          <Button onClick={handleSubmitRecipe} disabled={isAdding || !recipeDetails}>
-            {isAdding ? '追加中...' : 'レシピを追加'}
-          </Button>
         )}
       </div>
     </div>
