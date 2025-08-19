@@ -1,13 +1,14 @@
 import fs from 'fs';
 import path from 'path';
-import { scrapeUrl, RecipeInfo } from './lib/scraper';
-import { insertRecipe } from './lib/db'; // 暫定処置としてコメントアウト
+import { scrapeUrl, RecipeInfo } from '../lib/scraper';
+import { insertRecipe } from '../lib/db'; // 暫定処置としてコメントアウト
 import dotenv from 'dotenv';
 
 dotenv.config({ path: '.env.local' });
 
-const linksFilePath = path.join(__dirname, 'public', 'me2gemini', 'links.csv');
-const outputFilePath = path.join(__dirname, 'public', 'me2gemini', 'checkLinks.csv');
+const linksFilePath = path.join('.', 'public', 'me2gemini', 'cookpad_links.csv');
+const outputFilePath = path.join('.', 'public', 'me2gemini', 'checkLinks.csv');
+const FILTER_TUKUOMESU = 0
 
 async function main() {
   // 出力ファイルのヘッダーを書き込み
@@ -16,7 +17,8 @@ async function main() {
 
   // CSVファイルを読み込み
   const fileContent = fs.readFileSync(linksFilePath, 'utf-8');
-  const urls = fileContent.split('\n').slice(1).filter(url => url.trim() !== ''); // ヘッダーをスキップし、空行を除去
+  //const urls = fileContent.split('\n').slice(1).filter(url => url.trim() !== ''); // ヘッダーをスキップし、空行を除去
+  const urls = fileContent.split('\n').filter(url => url.trim() !== ''); // 空行を除去
 
   for (const url of urls) {
     try {
@@ -27,7 +29,7 @@ async function main() {
       const tsukurepoCount = parseInt(recipeInfo.tsukurepo.replace(/,/g, ''), 10) || 0;
 
       // つくれぽ数が500未満の場合はスキップ
-      if (tsukurepoCount < 500) {
+      if (tsukurepoCount < FILTER_TUKUOMESU) {
         console.log(`  -> Skipped (tsukurepo: ${tsukurepoCount})`);
         continue;
       }
@@ -49,7 +51,7 @@ async function main() {
 
       // 本来の処理：DBにインサート
       try {
-        await insertRecipe('sahamaru', recipeData);
+        await insertRecipe('sasaking', recipeData);
         console.log(`  -> Inserted recipe: ${recipeData.title}`);
       } catch (dbError) {
         if (dbError instanceof Error && dbError.message.includes('UNIQUE constraint failed')) {
