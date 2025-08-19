@@ -364,7 +364,7 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
           </div>
           <div>
             <label className="block text-sm font-medium">画像</label>
-            <div className="p-2 border rounded-md bg-gray-100 h-50 w-50 relative">
+            <div className="p-2 border rounded-md bg-gray-100 h-30 w-30 relative">
               {scrapedInfo?.image && (
                 <a href={`https://cookpad.com/jp/recipes/${recipeNumber}`} target="_blank" rel="noopener noreferrer">
                   <Image src={scrapedInfo.image} alt={scrapedInfo.title || ''} layout="fill" objectFit="cover" />
@@ -372,16 +372,16 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
               )}
             </div>
           </div>
+        </div>
+
+        {/* 2nd Column */}
+        <div className="md:col-span-1 space-y-4 pt-9">
           <div>
             <label className="block text-sm font-medium">つくれぽ数</label>
             <p className="p-2 border rounded-md bg-gray-100">
               {scrapedInfo?.tsukurepo}
             </p>
           </div>
-        </div>
-
-        {/* 2nd Column */}
-        <div className="md:col-span-1 space-y-4 pt-9">
           <div>
             <label className="block text-sm font-medium">種類</label>
             <div className="flex items-center space-x-4">
@@ -417,24 +417,33 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
               ))}
             </div>
           </div>
-          {!isEditMode && (
-            <Button onClick={handleSubmitRecipe} disabled={isAdding || !recipeDetails}>
-              {isAdding ? '追加中...' : 'レシピを追加'}
-            </Button>
-          )}
-          {isEditMode && (
-            <>
-              <Button onClick={handleUpdateRecipe} disabled={isAdding || isUpdating || isDeleting || !recipeDetails}>
-                {isUpdating ? '更新中...' : 'レシピを更新'}
+          <div className="flex justify-center space-x-4 mt-4">
+            {!isEditMode && (
+              <Button onClick={handleSubmitRecipe} disabled={isAdding || !recipeDetails}>
+                {isAdding ? '追加中...' : 'レシピを追加'}
               </Button>
-            </>
-          )}
+            )}
+            {isEditMode && (
+              <>
+                <Button onClick={handleUpdateRecipe} disabled={isAdding || isUpdating || isDeleting || !recipeDetails}>
+                  {isUpdating ? '更新中...' : 'レシピを更新'}
+                </Button>
+              </>
+            )}
+            {isEditMode && (
+              <>
+                <Button variant="destructive" onClick={handleDeleteRecipe} disabled={isAdding || isUpdating || isDeleting}>
+                  {isDeleting ? '削除中...' : 'レシピを削除'}
+                </Button>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Ingredients Column */}
         <div className="md:col-span-1">
           <h2 className="text-lg font-semibold">材料</h2>
-          <div className="p-2 border rounded-md h-full overflow-y-auto">
+          <div className="p-2 border rounded-md h-85 overflow-y-auto max-h-85">
             {initialLoad ? (
               <p className="text-sm text-gray-500">材料を読み込み中...</p>
             ) : (
@@ -454,7 +463,7 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
         {/* Main Ingredients Column */}
         <div className="md:col-span-1">
           <h2 className="text-lg font-semibold">主材料</h2>
-          <div className="p-2 border rounded-md h-full">
+          <div className="p-2 border rounded-md h-85">
             <TagSelectionGroup
               componentKey={`main-${recipeNumber}`}
               patterns={mainPatterns}
@@ -468,7 +477,7 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
         {/* Category Column */}
         <div className="md:col-span-1">
           <h2 className="text-lg font-semibold">カテゴリ</h2>
-          <div className="p-2 border rounded-md h-full">
+          <div className="p-2 border rounded-md h-85">
             <TagSelectionGroup
               componentKey={`cat-${recipeNumber}`}
               patterns={categoryPatterns}
@@ -481,15 +490,8 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
       </div>
 
       {/* Action Buttons */}
-      <div className="flex justify-end space-x-4 mt-4">
+      <div className="flex justify-end space-x-4">
         <Button variant="outline" onClick={() => router.back()}>閉じる</Button>
-        {isEditMode && (
-          <>
-            <Button variant="destructive" onClick={handleDeleteRecipe} disabled={isAdding || isUpdating || isDeleting}>
-              {isDeleting ? '削除中...' : 'レシピを削除'}
-            </Button>
-          </>
-        )}
       </div>
     </div>
   );

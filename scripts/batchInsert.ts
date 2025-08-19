@@ -51,7 +51,7 @@ async function main() {
 
       // 本来の処理：DBにインサート
       try {
-        await insertRecipe('sasaking', recipeData);
+        await insertRecipe('sahamaru', recipeData);
         console.log(`  -> Inserted recipe: ${recipeData.title}`);
       } catch (dbError) {
         if (dbError instanceof Error && dbError.message.includes('UNIQUE constraint failed')) {

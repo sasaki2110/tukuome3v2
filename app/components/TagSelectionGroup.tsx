@@ -147,7 +147,7 @@ export default function TagSelectionGroup({ patterns, selectedTags, onSelectionC
   
 
   return (
-    <Accordion type="multiple" className="w-full overflow-y-auto max-h-140">
+    <Accordion type="multiple" className="w-full overflow-y-auto max-h-80">
       {tagTree.map(node => (
         <TagAccordionNode
           key={node.id}
