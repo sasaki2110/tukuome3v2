@@ -19,10 +19,10 @@ interface TagNode extends Tag {
 
 interface TagSelectionGroupProps {
   patterns: string[];
-  selectedTags: Tag[]; // The source of truth for selected tags
+  selectedTags: Tag[];
   onSelectionChange: (selectedTags: Tag[]) => void;
-  suggestedTagNames?: string[]; // To pre-select tags based on suggestions
-  componentKey?: string; // To force re-render when other states change
+  onTagsFetched: (tags: Tag[]) => void; // Callback to pass all fetched tags
+  componentKey?: string;
 }
 
 // Helper function to build the hierarchical tag tree
@@ -103,8 +103,7 @@ const TagAccordionNode: React.FC<TagAccordionNodeProps> = ({ node, selectedTags,
 };
 
 
-export default function TagSelectionGroup({ patterns, selectedTags, onSelectionChange, suggestedTagNames, componentKey }: TagSelectionGroupProps) {
-  const [allTags, setAllTags] = useState<Tag[]>([]);
+export default function TagSelectionGroup({ patterns, selectedTags, onSelectionChange, onTagsFetched, componentKey }: TagSelectionGroupProps) {
   const [tagTree, setTagTree] = useState<TagNode[]>([]);
 
   const handleTagSelection = useCallback((tag: Tag, checked: boolean) => {
@@ -125,40 +124,27 @@ export default function TagSelectionGroup({ patterns, selectedTags, onSelectionC
         fetched.push(...await getTagsByName(p));
       }
       const uniqueTags = fetched.filter((tag, index, self) => index === self.findIndex((t) => t.id === tag.id));
-      setAllTags(uniqueTags);
-      setTagTree(buildTagTree(uniqueTags, patterns));
+      const tree = buildTagTree(uniqueTags, patterns);
+      setTagTree(tree);
+
+      // Extract only selectable (leaf) tags to pass to the parent
+      const selectableTags: Tag[] = [];
+      const traverse = (nodes: TagNode[]) => {
+        nodes.forEach(node => {
+          if (node.isSelectable) {
+            selectableTags.push(node);
+          } else {
+            traverse(node.children);
+          }
+        });
+      };
+      traverse(tree);
+      onTagsFetched(selectableTags);
     }
     fetchAndProcessTags();
-  }, [patterns, componentKey]);
+  }, [patterns, componentKey, onTagsFetched]);
 
-  useEffect(() => {
-    // Wait until tags are fetched and suggestions are provided
-    if (allTags.length === 0 || !suggestedTagNames) {
-      return;
-    }
-
-    // Filter suggested tags to only include valid, selectable tags
-    const allSelectableTagNames: string[] = [];
-    const traverse = (nodes: TagNode[]) => {
-      nodes.forEach(node => {
-        if (node.isSelectable) {
-          allSelectableTagNames.push(node.name);
-        } else {
-          traverse(node.children);
-        }
-      });
-    };
-    traverse(tagTree);
-
-    const validSuggestedTags = allTags.filter(tag =>
-      suggestedTagNames.includes(tag.name) && allSelectableTagNames.includes(tag.name)
-    );
-
-    // Notify parent component about the valid suggested tags
-    // This will become the new selection
-    onSelectionChange(validSuggestedTags);
-
-  }, [allTags, tagTree, suggestedTagNames, onSelectionChange]);
+  
 
   return (
     <Accordion type="multiple" className="w-full overflow-y-auto max-h-140">

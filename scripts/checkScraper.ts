@@ -1,4 +1,4 @@
-import { scrapeUrl } from './lib/scraper';
+import { scrapeUrl } from '../lib/scraper';
 
 const main = async () => {
   const url = process.argv[2];

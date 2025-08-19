@@ -24,6 +24,8 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
   const [recipeDetails, setRecipeDetails] = useState<RecipeDetails | null>(null);
   const [selectedMainTags, setSelectedMainTags] = useState<Tag[]>([]);
   const [selectedCategoryTags, setSelectedCategoryTags] = useState<Tag[]>([]);
+  const [allSelectableMainTags, setAllSelectableMainTags] = useState<Tag[]>([]);
+  const [allSelectableCategoryTags, setAllSelectableCategoryTags] = useState<Tag[]>([]);
 
   const [isPending, startTransition] = useTransition();
   const [isAdding, startAddingTransition] = useTransition();
@@ -37,6 +39,22 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
 
   const mainPatterns = useMemo(() => ["素材別%"], []);
   const categoryPatterns = useMemo(() => ["料理%", "お菓子%", "パン%"], []);
+
+  useEffect(() => {
+    // Validate and set selected tags when all necessary data is available
+    if ((allSelectableMainTags.length > 0 || allSelectableCategoryTags.length > 0) && recipeDetails?.llmOutput?.tags) {
+      const allAvailableSelectableTags = [...allSelectableMainTags, ...allSelectableCategoryTags];
+      const tagsToProcess = recipeDetails.llmOutput.tags;
+
+      const validTags = allAvailableSelectableTags.filter(tag => tagsToProcess.includes(tag.name));
+
+      const mainPatternRegex = new RegExp(`^(${mainPatterns.map(p => p.replace('%', '')).join('|')})`);
+      const categoryPatternRegex = new RegExp(`^(${categoryPatterns.map(p => p.replace('%', '')).join('|')})`);
+
+      setSelectedMainTags(validTags.filter(tag => mainPatternRegex.test(tag.name)));
+      setSelectedCategoryTags(validTags.filter(tag => categoryPatternRegex.test(tag.name)));
+    }
+  }, [allSelectableMainTags, allSelectableCategoryTags, recipeDetails, mainPatterns, categoryPatterns]);
 
   useEffect(() => {
     if (isEditMode && recipeId && initialLoad) {
@@ -73,8 +91,6 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
             });
             setIsMainChecked(recipe.ismain === 1);
             setIsSubChecked(recipe.issub === 1);
-            setSelectedMainTags(recipe.tags?.filter(tag => tag.startsWith('素材別')).map(name => ({ id: 0, name, dispname: name.replace(/^(素材別|料理|お菓子|パン)/, ''), level: 0 })) || []);
-            setSelectedCategoryTags(recipe.tags?.filter(tag => /^(料理|お菓子|パン)/.test(tag)).map(name => ({ id: 0, name, dispname: name.replace(/^(素材別|料理|お菓子|パン)/, ''), level: 0 })) || []);
 
           } else {
             // タグがない場合：LLMで推論
@@ -92,8 +108,7 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
                   ...prevDetails,
                   llmOutput: {
                     ...prevDetails.llmOutput,
-                    main_ingredients: tags.filter(t => t.startsWith('素材別')),
-                    categories: tags.filter(t => /^(料理|お菓子|パン)/.test(t)),
+                    tags: tags, // Ensure tags are passed for processing
                   }
                 }
               });
@@ -127,8 +142,7 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
             ...prevDetails,
             llmOutput: {
               ...prevDetails.llmOutput,
-              main_ingredients: tags.filter(t => t.startsWith('素材別')),
-              categories: tags.filter(t => /^(料理|お菓子|パン)/.test(t)),
+              tags: tags, // Ensure tags are passed for processing
             }
           }
         });
@@ -300,7 +314,21 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
     setSelectedCategoryTags(prevTags => prevTags.filter(tag => tag.name !== tagName));
   };
 
-  const allSelectedTags = [...selectedMainTags, ...selectedCategoryTags];
+  const allSelectedTags = useMemo(() => {
+    const combinedSelected = [...selectedMainTags, ...selectedCategoryTags];
+    // The sort order should be based on the comprehensive list of selectable tags
+    const allSelectableTags = [...allSelectableMainTags, ...allSelectableCategoryTags];
+    const sortOrder = new Map(allSelectableTags.map((tag, index) => [tag.name, index]));
+
+    combinedSelected.sort((a, b) => {
+        const orderA = sortOrder.get(a.name) ?? Infinity;
+        const orderB = sortOrder.get(b.name) ?? Infinity;
+        return orderA - orderB;
+    });
+
+    return combinedSelected;
+  }, [selectedMainTags, selectedCategoryTags, allSelectableMainTags, allSelectableCategoryTags]);
+
   const scrapedInfo = recipeDetails?.scrapedInfo;
 
   return (
@@ -432,7 +460,7 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
               patterns={mainPatterns}
               selectedTags={selectedMainTags}
               onSelectionChange={setSelectedMainTags}
-              suggestedTagNames={recipeDetails?.llmOutput?.tags}
+              onTagsFetched={setAllSelectableMainTags}
             />
           </div>
         </div>
@@ -446,7 +474,7 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
               patterns={categoryPatterns}
               selectedTags={selectedCategoryTags}
               onSelectionChange={setSelectedCategoryTags}
-              suggestedTagNames={recipeDetails?.llmOutput?.tags}
+              onTagsFetched={setAllSelectableCategoryTags}
             />
           </div>
         </div>
