@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import SearchInput from "./SearchInput";
 import SearchModeMenu from "./SearchModeMenu";
 import RankFilterMenu from "./RankFilterMenu";
@@ -10,6 +11,11 @@ import UntaggedFilterMenu from "./UntaggedFilterMenu";
 
 export default function RecipeFilterControls() {
   const [isExpanded, setIsExpanded] = useState(false);
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    setIsExpanded(false);
+  }, [searchParams]);
 
   return (
     <div className="fixed top-[70px] left-0 right-0 z-40 bg-white shadow-md p-4">

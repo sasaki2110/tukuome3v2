@@ -23,7 +23,7 @@ import { Tag, Repo, RawRepo } from '@/app/model/model';
 import { sql } from '@vercel/postgres';
 
 // 固定のユーザーID
-const USER_ID = 'tonkati';
+const USER_ID = 'sahamaru';
 
 // --- lib/db.ts からコピーした関数 --- //
 
@@ -271,7 +271,7 @@ async function generateGemmaTrainingData() {
   [レシピ本文]
   ${recipeBodyText}
   [回答]
-  ${labelString}`;
+  ${labelString}</s>`;
 
     // Trainer で label がエラーになるため、label を除外
     // ただし、label を含める場合は以下のようにする
@@ -279,7 +279,7 @@ async function generateGemmaTrainingData() {
     trainingData.push({ text: textString });
   }
 
-  const outputPath = path.join(process.cwd(), 'public', 'me2gemini', 'learn.json');
+  const outputPath = path.join(process.cwd(), 'public', 'me2gemini', 'learn_sahamaru.json');
 
   // public/me2gemini ディレクトリが存在しない場合は作成
   const outputDir = path.dirname(outputPath);
