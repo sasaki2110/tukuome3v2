@@ -1,6 +1,9 @@
 'use client';
 
 import { useState, useTransition, useEffect, useMemo } from 'react';
+
+// グローバルな実行制御フラグ
+const recipeFormFlags = new Map<string, boolean>();
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -36,6 +39,10 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
 
   const [isMainChecked, setIsMainChecked] = useState(false);
   const [isSubChecked, setIsSubChecked] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
+  
+  // グローバルな実行制御フラグ
+  const executionKey = `recipe-form-${recipeId}`;
 
   const mainPatterns = useMemo(() => ["素材別%"], []);
   const categoryPatterns = useMemo(() => ["料理%", "お菓子%", "パン%"], []);
@@ -54,14 +61,22 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
       setSelectedMainTags(validTags.filter(tag => mainPatternRegex.test(tag.name)));
       setSelectedCategoryTags(validTags.filter(tag => categoryPatternRegex.test(tag.name)));
     }
-  }, [allSelectableMainTags, allSelectableCategoryTags, recipeDetails, mainPatterns, categoryPatterns]);
+  }, [allSelectableMainTags, allSelectableCategoryTags, recipeDetails?.llmOutput?.tags, mainPatterns, categoryPatterns]);
 
   useEffect(() => {
-    if (isEditMode && recipeId && initialLoad) {
+    if (isEditMode && recipeId && initialLoad && !hasInitialized) {
+      // グローバルフラグで重複実行を防ぐ
+      if (recipeFormFlags.get(executionKey)) {
+        return;
+      }
+      
+      recipeFormFlags.set(executionKey, true); // グローバルフラグを設定
+      setHasInitialized(true); // 重複実行を防ぐ
       const fetchAndSetRecipe = async () => {
         try {
           // 1. DBから基本情報を取得
           const { recipes } = await getRecipeById(parseInt(recipeId, 10));
+          
           if (recipes.length === 0) {
             alert('指定されたレシピが見つかりませんでした。');
             setInitialLoad(false);
@@ -74,6 +89,7 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
           if (recipe.tags && recipe.tags.length > 0) {
             // タグがある場合：既存のデータを表示
             const scrapedInfoForIngredients = await reScrapeRecipe(recipe.id_n.toString());
+            
             setRecipeDetails({
               scrapedInfo: {
                 title: recipe.title,
@@ -95,6 +111,7 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
           } else {
             // タグがない場合：LLMで推論
             const details = await getRecipeDetailsFromUrl(recipe.id_n.toString());
+            
             setRecipeDetails(details);
             if (details?.llmOutput) {
               const { isMain, isSub, tags } = details.llmOutput;
@@ -119,13 +136,27 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
           alert('レシピの読み込みに失敗しました。');
         } finally {
           setInitialLoad(false);
+          // 処理完了後にフラグをクリア
+          recipeFormFlags.delete(executionKey);
         }
       };
       fetchAndSetRecipe();
     } else if (!isEditMode) {
       setInitialLoad(false);
     }
-  }, [isEditMode, recipeId, initialLoad]);
+  }, [isEditMode, recipeId, initialLoad, hasInitialized, executionKey]);
+
+  // コンポーネントのアンマウント時にフラグをクリア（バックアップ）
+  useEffect(() => {
+    return () => {
+      if (executionKey) {
+        // 少し遅延してクリア（処理中の可能性を考慮）
+        setTimeout(() => {
+          recipeFormFlags.delete(executionKey);
+        }, 1000);
+      }
+    };
+  }, [executionKey]);
 
   const handleFetchRecipe = () => {
     startTransition(async () => {
@@ -465,6 +496,7 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
           <h2 className="text-lg font-semibold">主材料</h2>
           <div className="p-2 border rounded-md h-85">
             <TagSelectionGroup
+              key={`main-${recipeNumber}-${hasInitialized}`}
               componentKey={`main-${recipeNumber}`}
               patterns={mainPatterns}
               selectedTags={selectedMainTags}
@@ -479,6 +511,7 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
           <h2 className="text-lg font-semibold">カテゴリ</h2>
           <div className="p-2 border rounded-md h-85">
             <TagSelectionGroup
+              key={`cat-${recipeNumber}-${hasInitialized}`}
               componentKey={`cat-${recipeNumber}`}
               patterns={categoryPatterns}
               selectedTags={selectedCategoryTags}

@@ -103,8 +103,12 @@ const TagAccordionNode: React.FC<TagAccordionNodeProps> = ({ node, selectedTags,
 };
 
 
+// グローバルな実行制御フラグ
+const executionFlags = new Map<string, boolean>();
+
 export default function TagSelectionGroup({ patterns, selectedTags, onSelectionChange, onTagsFetched, componentKey }: TagSelectionGroupProps) {
   const [tagTree, setTagTree] = useState<TagNode[]>([]);
+  const [hasInitialized, setHasInitialized] = useState(false);
 
   const handleTagSelection = useCallback((tag: Tag, checked: boolean) => {
     let newSelectedTags;
@@ -118,11 +122,26 @@ export default function TagSelectionGroup({ patterns, selectedTags, onSelectionC
 
 
   useEffect(() => {
+    const executionKey = `${componentKey}-${patterns.join(',')}`;
+    
+    // グローバルフラグで重複実行を防ぐ
+    if (executionFlags.get(executionKey)) {
+      return;
+    }
+    
     async function fetchAndProcessTags() {
-      const fetched: Tag[] = [];
-      for (const p of patterns) {
-        fetched.push(...await getTagsByName(p));
-      }
+      executionFlags.set(executionKey, true); // グローバルフラグを設定
+      setHasInitialized(true); // ローカルフラグも設定
+      
+      // パターンを並列で取得
+      const patternPromises = patterns.map(async (p) => {
+        const tags = await getTagsByName(p);
+        return tags;
+      });
+      
+      const patternResults = await Promise.all(patternPromises);
+      const fetched: Tag[] = patternResults.flat();
+      
       const uniqueTags = fetched.filter((tag, index, self) => index === self.findIndex((t) => t.id === tag.id));
       const tree = buildTagTree(uniqueTags, patterns);
       setTagTree(tree);
@@ -139,12 +158,27 @@ export default function TagSelectionGroup({ patterns, selectedTags, onSelectionC
         });
       };
       traverse(tree);
+      
       onTagsFetched(selectableTags);
+      
+      // 処理完了後にフラグをクリア
+      executionFlags.delete(executionKey);
     }
     fetchAndProcessTags();
-  }, [patterns, componentKey, onTagsFetched]);
+  }, [patterns, componentKey]); // componentKeyを依存配列に追加
 
-  
+  // コンポーネントのアンマウント時にフラグをクリア（バックアップ）
+  useEffect(() => {
+    return () => {
+      const executionKey = `${componentKey}-${patterns.join(',')}`;
+      if (executionKey) {
+        // 少し遅延してクリア（処理中の可能性を考慮）
+        setTimeout(() => {
+          executionFlags.delete(executionKey);
+        }, 1000);
+      }
+    };
+  }, [componentKey, patterns]);
 
   return (
     <Accordion type="multiple" className="w-full overflow-y-auto max-h-80">

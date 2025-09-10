@@ -42,3 +42,6 @@ next-env.d.ts
 
 # Gemini files
 /public/me2gemini/
+
+# spec-workflow
+.spec-workflow/

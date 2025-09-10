@@ -100,6 +100,7 @@ export async function getRecipeDetailsFromUrl(recipeNumber: string): Promise<Rec
 
   try {
     const scrapeResult = await scrapeUrl(url);
+    
     if (!scrapeResult) {
       return null;
     }
