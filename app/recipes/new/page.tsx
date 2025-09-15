@@ -1,5 +1,12 @@
 import RecipeForm from "@/app/components/RecipeForm";
 
-export default function RecipeNewPage() {
-  return <RecipeForm isEditMode={false} />;
+interface RecipeNewPageProps {
+  searchParams: Promise<{
+    recipeNumber?: string;
+  }>;
+}
+
+export default async function RecipeNewPage({ searchParams }: RecipeNewPageProps) {
+  const resolvedSearchParams = await searchParams;
+  return <RecipeForm isEditMode={false} initialRecipeNumber={resolvedSearchParams.recipeNumber} />;
 }

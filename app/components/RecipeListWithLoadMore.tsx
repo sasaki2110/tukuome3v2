@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useOptimistic, useTransition } from "react";
+import { useState, useOptimistic, useTransition, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import RecipeCard from "./RecipeCard";
 import { Repo } from "@/app/model/model";
 import { getFilteredRecipes } from "@/lib/services";
@@ -33,6 +34,7 @@ export function RecipeListWithLoadMore({
   searchSort,
   tagMode, // 追加
 }: RecipeListWithLoadMoreProps) {
+  const router = useRouter();
   const [recipes, setRecipes] = useState<Repo[]>(initialRecipes);
   const [, startTransition] = useTransition();
   const [optimisticRecipes, setOptimisticRecipes] = useOptimistic(
@@ -50,6 +52,19 @@ export function RecipeListWithLoadMore({
   const [loading, setLoading] = useState<boolean>(false);
   const [showFolderDialog, setShowFolderDialog] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState<Repo | null>(null);
+
+  // 検索結果が空で、レシピ番号検索の場合の処理
+  useEffect(() => {
+    if (optimisticRecipes.length === 0 && searchTerm && /^[0-9]+$/.test(searchTerm)) {
+      /*
+      const shouldCreateNew = confirm('レシピが存在しません。新規追加しますか？');
+      if (shouldCreateNew) {
+        router.push(`/recipes/new?recipeNumber=${searchTerm}`);
+      }
+      */
+      router.push(`/recipes/new?recipeNumber=${searchTerm}`);
+    }
+  }, [optimisticRecipes.length, searchTerm, router]);
 
   const handleRankChange = (recipeId: number, newRank: number) => {
     startTransition(async () => {

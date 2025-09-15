@@ -19,11 +19,12 @@ interface RecipeFormProps {
   recipeId?: string;
   isEditMode?: boolean;
   searchParams?: { [key: string]: string | string[] | undefined };
+  initialRecipeNumber?: string;
 }
 
-export default function RecipeForm({ recipeId, isEditMode = false, searchParams }: RecipeFormProps) {
+export default function RecipeForm({ recipeId, isEditMode = false, searchParams, initialRecipeNumber }: RecipeFormProps) {
   const router = useRouter();
-  const [recipeNumber, setRecipeNumber] = useState('');
+  const [recipeNumber, setRecipeNumber] = useState(initialRecipeNumber || '');
   const [recipeDetails, setRecipeDetails] = useState<RecipeDetails | null>(null);
   const [selectedMainTags, setSelectedMainTags] = useState<Tag[]>([]);
   const [selectedCategoryTags, setSelectedCategoryTags] = useState<Tag[]>([]);
@@ -214,9 +215,11 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
         return;
       }
 
+      /*+
       if (!confirm('レシピを登録します。よろしいですか？')) {
         return;
       }
+      */
 
       try {
         await addRecipe({
@@ -228,7 +231,9 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams 
           isSub: isSubChecked ? 1 : 0,
           tags: allSelectedTags.map(tag => tag.name),
         });
+        /*
         alert('レシピが追加されました！');
+        */
         router.push(`/recipes?title=${recipeNumber}`);
       } catch (error) {
         console.error('Failed to add recipe:', error);
