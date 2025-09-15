@@ -97,6 +97,34 @@ function extractRecipeInfo(dom: SerializableNode): RecipeInfo {
               author = node.attributes.title;
           }
       }
+      
+      // 4-2. 作者（デフォルトアバターの場合）
+      // より具体的なセレクター: div.max-lg\:hidden.print\:block 内の span.font-semibold
+      if (!author && node.tag === 'div' && node.attributes?.class?.includes('max-lg:hidden') && node.attributes?.class?.includes('print:block')) {
+          const findAuthorInChildren = (child: SerializableNode): string => {
+              if (!child || child.type !== 'tag') return '';
+              if (child.tag === 'span' && child.attributes?.class?.includes('font-semibold')) {
+                  return findText(child).trim();
+              }
+              if (child.children) {
+                  for (const grandChild of child.children) {
+                      const result = findAuthorInChildren(grandChild);
+                      if (result) return result;
+                  }
+              }
+              return '';
+          };
+          
+          if (node.children) {
+              for (const child of node.children) {
+                  const authorText = findAuthorInChildren(child);
+                  if (authorText) {
+                      author = authorText;
+                      break;
+                  }
+              }
+          }
+      }
 
       // 5. レシピID
       if (node.tag === 'button' && node.attributes?.['data-clipboard-target'] === 'button' && node.attributes?.['data-action'] === 'clipboard#copy') {
@@ -146,6 +174,15 @@ export async function scrapeUrl(url: string) {
   
   // 情報を抽出
   const recipeInfo = extractRecipeInfo(dom);
+
+  // 作者名の追加取得（CSSセレクターを使用）
+  if (!recipeInfo.author) {
+    // より具体的なセレクター: 作者情報を含むdiv内のspan.font-semibold
+    const authorFromSpan = $('div.max-lg\\:hidden.print\\:block a[href*="/users/"] span.font-semibold').first().text().trim();
+    if (authorFromSpan) {
+      recipeInfo.author = authorFromSpan;
+    }
+  }
 
   return { dom, recipeInfo };
 }
