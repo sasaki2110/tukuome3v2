@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useOptimistic, useTransition, useEffect } from "react";
+import { useState, useOptimistic, useTransition, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import RecipeCard from "./RecipeCard";
 import { Repo } from "@/app/model/model";
@@ -52,6 +52,7 @@ export function RecipeListWithLoadMore({
   const [loading, setLoading] = useState<boolean>(false);
   const [showFolderDialog, setShowFolderDialog] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState<Repo | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   // 検索結果が空で、レシピ番号検索の場合の処理
   useEffect(() => {
@@ -65,6 +66,51 @@ export function RecipeListWithLoadMore({
       router.push(`/recipes/new?recipeNumber=${searchTerm}`);
     }
   }, [optimisticRecipes.length, searchTerm, router]);
+
+  const loadMoreRecipes = useCallback(async () => {
+    setLoading(true);
+    const nextOffset = calculateNextOffset(offset);
+    const { recipes: newRecipes, hasMore: newHasMore } = await getFilteredRecipes(
+      nextOffset,
+      ITEMS_PER_PAGE,
+      searchTerm,
+      searchMode,
+      searchTag,
+      folderName,
+      searchRank,
+      searchSort,
+      tagMode // tagModeを渡す
+    );
+    setRecipes((prevRecipes) => [...prevRecipes, ...newRecipes]);
+    setOffset(nextOffset);
+    setHasMore(newHasMore);
+    setLoading(false);
+  }, [offset, searchTerm, searchMode, searchTag, folderName, searchRank, searchSort, tagMode]);
+
+  // Intersection Observer で一番下に到達したら自動的に「もっと見る」を実行
+  useEffect(() => {
+    const observerElement = loadMoreRef.current;
+    if (!observerElement || !hasMore || loading) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loading) {
+          loadMoreRecipes();
+        }
+      },
+      {
+        root: null,
+        rootMargin: '100px', // 100px手前で発火（スムーズな読み込みのため）
+        threshold: 0.1,
+      }
+    );
+
+    observer.observe(observerElement);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [hasMore, loading, loadMoreRecipes]);
 
   const handleRankChange = (recipeId: number, newRank: number) => {
     startTransition(async () => {
@@ -103,26 +149,6 @@ export function RecipeListWithLoadMore({
     setShowFolderDialog(true);
   };
 
-  const loadMoreRecipes = async () => {
-    setLoading(true);
-    const nextOffset = calculateNextOffset(offset);
-    const { recipes: newRecipes, hasMore: newHasMore } = await getFilteredRecipes(
-      nextOffset,
-      ITEMS_PER_PAGE,
-      searchTerm,
-      searchMode,
-      searchTag,
-      folderName,
-      searchRank,
-      searchSort,
-      tagMode // tagModeを渡す
-    );
-    setRecipes((prevRecipes) => [...prevRecipes, ...newRecipes]);
-    setOffset(nextOffset);
-    setHasMore(newHasMore);
-    setLoading(false);
-  };
-
   return (
     <div>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-6 gap-4">
@@ -137,15 +163,19 @@ export function RecipeListWithLoadMore({
         ))}
       </div>
       {hasMore && (
-        <div className="flex justify-center mt-8">
-          <button
-            onClick={loadMoreRecipes}
-            disabled={loading}
-            className="px-6 py-3 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50"
-          >
-            {loading ? "読み込み中..." : "もっと見る"}
-          </button>
-        </div>
+        <>
+          <div className="flex justify-center mt-8">
+            <button
+              onClick={loadMoreRecipes}
+              disabled={loading}
+              className="px-6 py-3 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50"
+            >
+              {loading ? "読み込み中..." : "もっと見る"}
+            </button>
+          </div>
+          {/* Intersection Observer用の監視要素 */}
+          <div ref={loadMoreRef} className="h-1 w-full" />
+        </>
       )}
       <FolderDialog
         isOpen={showFolderDialog}

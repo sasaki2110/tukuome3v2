@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import AutherCard from './AutherCard';
 import { Auther } from '@/app/model/model';
 import { fetchAuthers } from '@/lib/services';
@@ -22,8 +22,9 @@ export function AutherListWithLoadMore({
   const [offset, setOffset] = useState<number>(initialOffset);
   const [hasMore, setHasMore] = useState<boolean>(initialHasMore);
   const [loading, setLoading] = useState<boolean>(false);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  const loadMoreAuthers = async () => {
+  const loadMoreAuthers = useCallback(async () => {
     setLoading(true);
     const nextOffset = calculateNextOffset(offset);
     const { authers: newAuthers, hasMore: newHasMore } = await fetchAuthers(
@@ -34,7 +35,32 @@ export function AutherListWithLoadMore({
     setOffset(nextOffset);
     setHasMore(newHasMore);
     setLoading(false);
-  };
+  }, [offset]);
+
+  // Intersection Observer で一番下に到達したら自動的に「もっと見る」を実行
+  useEffect(() => {
+    const observerElement = loadMoreRef.current;
+    if (!observerElement || !hasMore || loading) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loading) {
+          loadMoreAuthers();
+        }
+      },
+      {
+        root: null,
+        rootMargin: '100px', // 100px手前で発火（スムーズな読み込みのため）
+        threshold: 0.1,
+      }
+    );
+
+    observer.observe(observerElement);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [hasMore, loading, loadMoreAuthers]);
 
   return (
     <div>
@@ -44,15 +70,19 @@ export function AutherListWithLoadMore({
         ))}
       </div>
       {hasMore && (
-        <div className="flex justify-center mt-8">
-          <button
-            onClick={loadMoreAuthers}
-            disabled={loading}
-            className="px-6 py-3 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50"
-          >
-            {loading ? '読み込み中...' : 'もっと見る'}
-          </button>
-        </div>
+        <>
+          <div className="flex justify-center mt-8">
+            <button
+              onClick={loadMoreAuthers}
+              disabled={loading}
+              className="px-6 py-3 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50"
+            >
+              {loading ? '読み込み中...' : 'もっと見る'}
+            </button>
+          </div>
+          {/* Intersection Observer用の監視要素 */}
+          <div ref={loadMoreRef} className="h-1 w-full" />
+        </>
       )}
     </div>
   );
