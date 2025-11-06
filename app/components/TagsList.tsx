@@ -45,6 +45,11 @@ export function TagsList({ initialTags }: TagsListProps) {
     setPath(prevPath => prevPath.slice(0, -1));
   };
 
+  // タグ検索画面で「素材別」を「食材」に置き換える
+  const getDisplayName = (dispname: string) => {
+    return dispname === '素材別' ? '食材' : dispname;
+  };
+
   return (
     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 p-2">
       {isLoading ? (
@@ -55,9 +60,16 @@ export function TagsList({ initialTags }: TagsListProps) {
         <>
           {tags
             .filter((tag) => tag.hasimageuri === "1")
-            .map((tag) => (
-            <TagCard key={tag.id} tag={tag} onClick={handleTagClick} />
-          ))}
+            .map((tag) => {
+              // 表示用に「素材別」を「食材」に置き換えたタグを作成
+              const displayTag = {
+                ...tag,
+                dispname: getDisplayName(tag.dispname),
+              };
+              return (
+                <TagCard key={tag.id} tag={displayTag} onClick={handleTagClick} />
+              );
+            })}
 
           {path.length > 0 && (
             <TagCard key="back-button" tag={{
