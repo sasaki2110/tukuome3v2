@@ -54,7 +54,7 @@ function parseLlmResponse(response: LlmResponse): ParsedLlmOutput {
 export async function getTagsFromLlm(title: string, ingredients: string[]): Promise<ParsedLlmOutput> {
   const prompt = await generatePromptForGemma(title, ingredients);
 
-  const llmApiEndpoint = process.env.GEMMA_API_ENDPOINT || 'http://nvicuda:8000/generate';
+  const llmApiEndpoint = process.env.GEMMA_API_ENDPOINT || 'http://tukuomeko:8000/generate';
 
   try {
     const response = await fetch(llmApiEndpoint, {
