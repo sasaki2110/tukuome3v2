@@ -116,7 +116,6 @@ export async function getReposByTitle(userId: string, searchTerm: string, limit:
  * @returns Repo型の配列と、まだ取得できるレシピがあるかを示すhasMoreフラグ
  */
 export async function getReposByTag(userId: string, tagName: string, limit: number, offset: number, mode: string, rank: string, sort: string, tagMode?: string): Promise<{ repos: Repo[], hasMore: boolean }> {
-  const str = "%" + tagName + "%";
   const modeWhereClause = getModeWhereClause(mode);
   const rankWhereClause = getRankWhereClause(rank);
   const untaggedWhereClause = getUntaggedWhereClause(tagMode || ''); // 追加
@@ -129,11 +128,11 @@ export async function getReposByTag(userId: string, tagName: string, limit: numb
         WHERE userid = $1 AND ' ' || idofrepos || ' ' LIKE '%' || repo.id_n || '%'
       ) as foldered
     FROM repo
-    WHERE userid = $1 AND tag LIKE $2 ${modeWhereClause} ${rankWhereClause} ${untaggedWhereClause} 
+    WHERE userid = $1 AND $2 = ANY(string_to_array(tag, ' ')) ${modeWhereClause} ${rankWhereClause} ${untaggedWhereClause} 
     ORDER BY reposu_n ${sort}, id_n DESC
     LIMIT $3 OFFSET $4;
   `;
-  const { rows } = await sql.query(query, [userId, str, limit, offset]);
+  const { rows } = await sql.query(query, [userId, tagName, limit, offset]);
 
   const hasMore = rows.length === limit;
 
