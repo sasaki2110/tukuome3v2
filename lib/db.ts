@@ -440,9 +440,24 @@ export async function deleteAllTags(userId: string): Promise<void> {
  * @param tags 挿入するタグの配列
  */
 export async function insertTags(userId: string, tags: { id: number; level: number; dispname: string; name: string }[]): Promise<void> {
-  for (const tag of tags) {
-    await sql`INSERT INTO tag (userid, id, level, dispname, name) VALUES (${userId}, ${tag.id}, ${tag.level}, ${tag.dispname}, ${tag.name});`;
-  }
+  if (tags.length === 0) return;
+  
+  // バルクINSERTで高速化（パラメータ化クエリで安全に）
+  const placeholders: string[] = [];
+  const params: (string | number)[] = [];
+  
+  tags.forEach((tag, index) => {
+    const baseIndex = index * 5;
+    placeholders.push(`($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5})`);
+    params.push(userId, tag.id, tag.level, tag.dispname, tag.name);
+  });
+  
+  const query = `
+    INSERT INTO tag (userid, id, level, dispname, name) 
+    VALUES ${placeholders.join(', ')}
+  `;
+  
+  await sql.query(query, params);
 }
 
 /**
@@ -467,19 +482,27 @@ export async function getMasterTags(userId: string, gen: number): Promise<Master
  * @param newMasterTags 新しい現世代 (gen=1) のMasterTagデータの配列
  */
 export async function updateMasterTags(userId: string, newMasterTags: MasterTag[]): Promise<void> {
-  // 1. gen=0 のレコードを削除
-  await sql`DELETE FROM mastertag WHERE userid = ${userId} AND gen = 0;`;
-
-  // 2. gen=1 のレコードを gen=0 としてコピー
-  await sql`INSERT INTO mastertag (userid, gen, id, l, m, s, ss) SELECT ${userId}, 0, id, l, m, s, ss FROM mastertag WHERE userid = ${userId} AND gen = 1;`;
-
-  // 3. gen=1 のレコードを削除
+  // 1. gen=1 のレコードを削除
   await sql`DELETE FROM mastertag WHERE userid = ${userId} AND gen = 1;`;
 
-  // 4. 新しい gen=1 のレコードを挿入
-  for (const tag of newMasterTags) {
-    await sql`INSERT INTO mastertag (userid, gen, id, l, m, s, ss) VALUES (${userId}, ${tag.gen}, ${tag.id}, ${tag.l}, ${tag.m}, ${tag.s}, ${tag.ss});`;
-  }
+  // 2. 新しい gen=1 のレコードをバルクINSERTで高速化
+  if (newMasterTags.length === 0) return;
+  
+  const placeholders: string[] = [];
+  const params: (string | number)[] = [];
+  
+  newMasterTags.forEach((tag, index) => {
+    const baseIndex = index * 7;
+    placeholders.push(`($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6}, $${baseIndex + 7})`);
+    params.push(userId, tag.gen, tag.id, tag.l, tag.m, tag.s, tag.ss);
+  });
+  
+  const query = `
+    INSERT INTO mastertag (userid, gen, id, l, m, s, ss) 
+    VALUES ${placeholders.join(', ')}
+  `;
+  
+  await sql.query(query, params);
 }
 
 // フォルダー関連のDB操作

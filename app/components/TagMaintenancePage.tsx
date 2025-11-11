@@ -24,21 +24,9 @@ export default function TagMaintenancePage() {
     });
   }, []);
 
-  const handleLoadBackup = () => {
-    startTransition(async () => {
-        const result = await loadMasterTags(0);
-        if (result.success) {
-            setMasterTags(result.data || '');
-            alert('ひとつ前のマスタを読み込みました。');
-        } else {
-            alert(result.message);
-        }
-    });
-  };
-
   const handleSubmit = async () => {
     const confirmation = confirm(
-      "マスタタグを生成します。\n処理時間に２分ほど頂戴いたします。\n実行してもよろしいですか？"
+      "マスタタグを生成します。\n実行してもよろしいですか？"
     );
 
     if (!confirmation) {
@@ -74,22 +62,13 @@ export default function TagMaintenancePage() {
           placeholder="マスタータグをタブ区切りで入力..."
         />
         <div className="flex justify-between items-center">
-            <div className='flex gap-2'>
-                <Button onClick={handleSubmit} disabled={isPending}>
-                    {isPending ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                        'マスタタグ生成'
-                    )}
-                </Button>
-                <Button onClick={handleLoadBackup} variant="outline" disabled={isPending}>
-                    {isPending ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                        'ひとつ前のマスタを開く'
-                    )}
-                </Button>
-            </div>
+            <Button onClick={handleSubmit} disabled={isPending}>
+                {isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                    'マスタタグ生成'
+                )}
+            </Button>
             <Button onClick={() => router.push('/recipes')} variant="ghost">
                 閉じる
             </Button>
