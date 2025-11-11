@@ -59,7 +59,19 @@ export function TagsList({ initialTags }: TagsListProps) {
       ) : (
         <>
           {tags
-            .filter((tag) => tag.hasimageuri === "1")
+            .filter((tag) => {
+              // 子タグがある場合は表示
+              if (tag.hasschildren === "▼") {
+                return true;
+              }
+              // レシピ件数を抽出（"X 件"形式から数値を取得）
+              const match = tag.hasschildren.match(/^(\d+)\s*件$/);
+              if (match) {
+                const recipeCount = parseInt(match[1], 10);
+                return recipeCount > 0;
+              }
+              return false;
+            })
             .map((tag) => {
               // 表示用に「素材別」を「食材」に置き換えたタグを作成
               const displayTag = {
