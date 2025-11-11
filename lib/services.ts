@@ -299,7 +299,16 @@ export async function removeRecipeFromFolderAction(folderName: string, recipeId:
 export async function updateTags(tags: { id: number; level: number; dispName: string; name: string }[]): Promise<void> {
   const userId = await getUserIdFromSession();
   await deleteAllTags(userId);
-  await insertTags(userId, tags.map(t => ({ id: t.id, level: t.level, dispname: t.dispName, name: t.name })));
+  await insertTags(userId, tags.map(t => ({ 
+    id: t.id, 
+    level: t.level, 
+    dispname: t.dispName, 
+    name: t.name,
+    l: '',
+    m: '',
+    s: '',
+    ss: ''
+  })));
 }
 
 /**
@@ -337,7 +346,7 @@ export async function updateMasterTagsInDb(masterTagText: string): Promise<void>
   await updateMasterTags(userId, newMasterTags);
 
   // MasterTagのデータ（gen=1）を元に、tagテーブルを更新
-  const tagsForTagTable: { id: number; level: number; dispname: string; name: string }[] = [];
+  const tagsForTagTable: { id: number; level: number; dispname: string; name: string; l: string; m: string; s: string; ss: string }[] = [];
   let tagTableIdCounter = 1; // tagテーブル用の独立したIDカウンター
   const existingTagNames = new Set<string>(); // 重複チェック用
 
@@ -348,7 +357,16 @@ export async function updateMasterTagsInDb(masterTagText: string): Promise<void>
       path.push(mt.l);
       const name = path.join('');
       if (!existingTagNames.has(name)) {
-        tagsForTagTable.push({ id: tagTableIdCounter++, level: 0, dispname: mt.l, name });
+        tagsForTagTable.push({ 
+          id: tagTableIdCounter++, 
+          level: 0, 
+          dispname: mt.l, 
+          name,
+          l: mt.l,
+          m: '',
+          s: '',
+          ss: ''
+        });
         existingTagNames.add(name);
       }
     }
@@ -357,7 +375,16 @@ export async function updateMasterTagsInDb(masterTagText: string): Promise<void>
       path.push(mt.m);
       const name = path.join('');
       if (!existingTagNames.has(name)) {
-        tagsForTagTable.push({ id: tagTableIdCounter++, level: 1, dispname: mt.m, name });
+        tagsForTagTable.push({ 
+          id: tagTableIdCounter++, 
+          level: 1, 
+          dispname: mt.m, 
+          name,
+          l: mt.l,
+          m: mt.m,
+          s: '',
+          ss: ''
+        });
         existingTagNames.add(name);
       }
     }
@@ -366,7 +393,16 @@ export async function updateMasterTagsInDb(masterTagText: string): Promise<void>
       path.push(mt.s);
       const name = path.join('');
       if (!existingTagNames.has(name)) {
-        tagsForTagTable.push({ id: tagTableIdCounter++, level: 2, dispname: mt.s, name });
+        tagsForTagTable.push({ 
+          id: tagTableIdCounter++, 
+          level: 2, 
+          dispname: mt.s, 
+          name,
+          l: mt.l,
+          m: mt.m,
+          s: mt.s,
+          ss: ''
+        });
         existingTagNames.add(name);
       }
     }
@@ -375,7 +411,16 @@ export async function updateMasterTagsInDb(masterTagText: string): Promise<void>
       path.push(mt.ss);
       const name = path.join('');
       if (!existingTagNames.has(name)) {
-        tagsForTagTable.push({ id: tagTableIdCounter++, level: 3, dispname: mt.ss, name });
+        tagsForTagTable.push({ 
+          id: tagTableIdCounter++, 
+          level: 3, 
+          dispname: mt.ss, 
+          name,
+          l: mt.l,
+          m: mt.m,
+          s: mt.s,
+          ss: mt.ss
+        });
         existingTagNames.add(name);
       }
     }

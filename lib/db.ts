@@ -271,15 +271,32 @@ export async function getDispTagsOptimized(userId: string, level: number, value:
   let query: string;
   let params: (string | number)[];
 
+  // levelに応じてchild_tag_countの条件を決定
+  let childTagCondition: string;
+  if (level === 0) {
+    childTagCondition = `tag.l = t.l`;
+  } else if (level === 1) {
+    childTagCondition = `tag.l || tag.m = t.l || t.m`;
+  } else if (level === 2) {
+    childTagCondition = `tag.l || tag.m || tag.s = t.l || t.m || t.s`;
+  } else {
+    // level 3の場合は子タグがないので、この条件は使われないが念のため
+    childTagCondition = `tag.l || tag.m || tag.s || tag.ss = t.l || t.m || t.s || t.ss`;
+  }
+
   // Base query for tags
   query = `
     SELECT
         t.id,
         t.dispname,
         t.name,
+        t.l,
+        t.m,
+        t.s,
+        t.ss,
         (SELECT image FROM repo WHERE userid = $1 AND tag LIKE '%' || t.name || '%' ORDER BY reposu_n DESC, id_n DESC LIMIT 1) AS imageuri,
-        (SELECT COUNT(*) FROM tag WHERE userid = $1 AND level = t.level + 1 AND name LIKE t.name || '%') AS child_tag_count,
-        (SELECT COUNT(*) FROM repo WHERE userid = $1 AND tag LIKE '%' || t.name || '%') AS recipe_count
+        (SELECT COUNT(*) FROM tag WHERE userid = $1 AND level = t.level + 1 AND ${childTagCondition}) AS child_tag_count,
+        (SELECT COUNT(*) FROM repo WHERE userid = $1 AND repo.tag IS NOT NULL AND repo.tag != '' AND t.name = ANY(string_to_array(repo.tag, ' '))) AS recipe_count
     FROM
         tag t
     WHERE
@@ -290,10 +307,30 @@ export async function getDispTagsOptimized(userId: string, level: number, value:
     query += ` ORDER BY t.id;`;
     params = [userId, level];
   } else {
-    query += ` AND t.name LIKE $3 || '%' ORDER BY t.id;`;
+    // levelに応じて条件を変更
+    if (level === 1) {
+      query += ` AND t.l = $3 ORDER BY t.id;`;
+    } else if (level === 2) {
+      query += ` AND t.l || t.m = $3 ORDER BY t.id;`;
+    } else if (level === 3) {
+      query += ` AND t.l || t.m || t.s = $3 ORDER BY t.id;`;
+    } else {
+      // level 0の場合はここには来ないが、念のため
+      query += ` AND t.l = $3 ORDER BY t.id;`;
+    }
     params = [userId, level, value];
   }
 
+  // デバッグ用: 実際に発行されるSQL文とパラメータを出力
+  /*
+  console.log('=== getDispTagsOptimized SQL ===');
+  console.log('Query:', query);
+  console.log('Params:', params);
+  console.log('Value:', value);
+  console.log('Level:', level);
+  console.log('==============================');
+  */
+ 
   const { rows } = await sql.query(query, params);
 
   const dispTags: DispTag[] = rows.map(row => {
@@ -439,7 +476,7 @@ export async function deleteAllTags(userId: string): Promise<void> {
  * @param userId ユーザーID
  * @param tags 挿入するタグの配列
  */
-export async function insertTags(userId: string, tags: { id: number; level: number; dispname: string; name: string }[]): Promise<void> {
+export async function insertTags(userId: string, tags: { id: number; level: number; dispname: string; name: string; l: string; m: string; s: string; ss: string }[]): Promise<void> {
   if (tags.length === 0) return;
   
   // バルクINSERTで高速化（パラメータ化クエリで安全に）
@@ -447,13 +484,13 @@ export async function insertTags(userId: string, tags: { id: number; level: numb
   const params: (string | number)[] = [];
   
   tags.forEach((tag, index) => {
-    const baseIndex = index * 5;
-    placeholders.push(`($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5})`);
-    params.push(userId, tag.id, tag.level, tag.dispname, tag.name);
+    const baseIndex = index * 9;
+    placeholders.push(`($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6}, $${baseIndex + 7}, $${baseIndex + 8}, $${baseIndex + 9})`);
+    params.push(userId, tag.id, tag.level, tag.dispname, tag.name, tag.l, tag.m, tag.s, tag.ss);
   });
   
   const query = `
-    INSERT INTO tag (userid, id, level, dispname, name) 
+    INSERT INTO tag (userid, id, level, dispname, name, l, m, s, ss) 
     VALUES ${placeholders.join(', ')}
   `;
   

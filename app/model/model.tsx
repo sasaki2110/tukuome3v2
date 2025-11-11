@@ -59,6 +59,12 @@ export type Tag = {
 
     /// タグの識別子（大・中・小・極小を連結したもの）
     name: string,
+
+    /// 階層構造を保持するカラム（検索精度向上のため）
+    l: string,  // 大タグ
+    m: string,  // 中タグ
+    s: string,  // 小タグ
+    ss: string, // 極小タグ
 }
 
 
