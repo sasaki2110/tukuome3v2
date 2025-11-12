@@ -40,6 +40,12 @@ function processRepoRows(rows: RawRepo[]): Repo[] {
   return rows.map(row => ({
     ...row,
     tags: row.tag ? row.tag.split(' ') : [],
+    // 材料情報をJSONB型から配列にパース
+    ingredients: row.ingredients 
+      ? (typeof row.ingredients === 'string' 
+          ? JSON.parse(row.ingredients) 
+          : row.ingredients)
+      : undefined,
   }));
 }
 
@@ -388,10 +394,16 @@ export async function insertRecipe(
     tags: string[]; // Combined tags
     isMain: number;
     isSub: number;
+    ingredients?: string[]; // 追加: 材料情報
   }
 ): Promise<void> {
   const reposu_n = parseInt(recipeData.tsukurepo, 10) || 0;
   const tagString = recipeData.tags.join(' '); // Join tags into a single string
+  
+  // 材料情報をJSON形式に変換（nullの場合はNULL）
+  const ingredientsJson = recipeData.ingredients && recipeData.ingredients.length > 0
+    ? JSON.stringify(recipeData.ingredients)
+    : null;
 
   await sql`
     INSERT INTO repo (
@@ -404,7 +416,8 @@ export async function insertRecipe(
       comment,
       tag,
       ismain,
-      issub
+      issub,
+      ingredients
     ) VALUES (
       ${userId},
       ${recipeData.id_n},
@@ -415,7 +428,8 @@ export async function insertRecipe(
       '', -- Default comment to empty string
       ${tagString},
       ${recipeData.isMain},
-      ${recipeData.isSub}
+      ${recipeData.isSub},
+      ${ingredientsJson}::jsonb
     );
   `;
 }
@@ -446,10 +460,16 @@ export async function updateRecipe(
     tags: string[]; // Combined tags
     isMain: number;
     isSub: number;
+    ingredients?: string[]; // 追加: 材料情報
   }
 ): Promise<void> {
   const reposu_n = parseInt(recipeData.tsukurepo, 10) || 0;
   const tagString = recipeData.tags.join(' ');
+  
+  // 材料情報をJSON形式に変換（nullの場合はNULL）
+  const ingredientsJson = recipeData.ingredients && recipeData.ingredients.length > 0
+    ? JSON.stringify(recipeData.ingredients)
+    : null;
 
   await sql`
     UPDATE repo SET
@@ -458,7 +478,8 @@ export async function updateRecipe(
       reposu_n = ${reposu_n},
       tag = ${tagString},
       ismain = ${recipeData.isMain},
-      issub = ${recipeData.isSub}
+      issub = ${recipeData.isSub},
+      ingredients = ${ingredientsJson}::jsonb
     WHERE userid = ${userId} AND id_n = ${recipeData.id_n};
   `;
 }

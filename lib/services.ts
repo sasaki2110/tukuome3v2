@@ -186,6 +186,7 @@ export async function addRecipe(
     tags: string[];
     isMain: number;
     isSub: number;
+    ingredients?: string[]; // 追加: 材料情報
   }
 ): Promise<void> {
   const userId = await getUserIdFromSession();
@@ -197,6 +198,7 @@ export async function addRecipe(
     tags: recipeData.tags,
     isMain: recipeData.isMain,
     isSub: recipeData.isSub,
+    ingredients: recipeData.ingredients, // 追加
   });
 }
 
@@ -222,6 +224,7 @@ export async function updateRecipe(
     tags: string[];
     isMain: number;
     isSub: number;
+    ingredients?: string[]; // 追加: 材料情報
   }
 ): Promise<void> {
   const userId = await getUserIdFromSession();
@@ -233,6 +236,7 @@ export async function updateRecipe(
     tags: recipeData.tags,
     isMain: recipeData.isMain,
     isSub: recipeData.isSub,
+    ingredients: recipeData.ingredients, // 追加
   });
 }
 

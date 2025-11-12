@@ -15,6 +15,7 @@ export type RawRepo = {
     foldered?: boolean,
     author?: string,
     recipe_type: 'main_dish' | 'side_dish' | 'other',
+    ingredients?: string[] | null, // 追加: JSONB型からパースした配列
 }
 
 // レシピ型（アプリケーションで使う型）
@@ -32,6 +33,7 @@ export type Repo = {
     issub: number,  // 未使用
     foldered?: boolean, // フォルダーに登録済みかどうか
     author?: string, // Add author to the type
+    ingredients?: string[], // 追加: 材料情報
 }
 
 // タグ型（DB型）

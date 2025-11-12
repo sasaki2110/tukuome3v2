@@ -2,6 +2,11 @@
 
 import { useState, useTransition, useEffect, useMemo } from 'react';
 
+// レシピ変更時のスクレイピング制御フラグ
+// true: レシピ変更時にスクレイピングを実行する
+// false: レシピ変更時にスクレイピングを実行しない（DBから材料情報を取得）
+const ENABLE_SCRAPING_ON_UPDATE = false; // デフォルトは false（高速化のため）
+
 // グローバルな実行制御フラグ
 const recipeFormFlags = new Map<string, boolean>();
 import { Button } from "@/components/ui/button";
@@ -89,23 +94,44 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams,
           // 2. タグの有無をチェック
           if (recipe.tags && recipe.tags.length > 0) {
             // タグがある場合：既存のデータを表示
-            const scrapedInfoForIngredients = await reScrapeRecipe(recipe.id_n.toString());
-            
-            setRecipeDetails({
-              scrapedInfo: {
-                title: recipe.title,
-                image: recipe.image,
-                tsukurepo: recipe.reposu_n?.toString() || '0',
-                author: recipe.author || '',
-                recipeid: recipe.id_n.toString(),
-                ingredients: scrapedInfoForIngredients?.ingredients || [],
-              },
-              llmOutput: {
-                isMain: recipe.ismain === 1,
-                isSub: recipe.issub === 1,
-                tags: recipe.tags,
-              },
-            });
+            // フラグに応じてスクレイピングを実行するか決定
+            if (ENABLE_SCRAPING_ON_UPDATE) {
+              // スクレイピングを実行して最新情報を取得
+              const scrapedInfoForIngredients = await reScrapeRecipe(recipe.id_n.toString());
+              
+              setRecipeDetails({
+                scrapedInfo: {
+                  title: recipe.title.replace(/ by .*$/, ''), // " by 作者名" を除去
+                  image: recipe.image,
+                  tsukurepo: recipe.reposu_n?.toString() || '0',
+                  author: recipe.author || '',
+                  recipeid: recipe.id_n.toString(),
+                  ingredients: scrapedInfoForIngredients?.ingredients || [],
+                },
+                llmOutput: {
+                  isMain: recipe.ismain === 1,
+                  isSub: recipe.issub === 1,
+                  tags: recipe.tags,
+                },
+              });
+            } else {
+              // DBから取得した材料情報を使用（スクレイピング不要）
+              setRecipeDetails({
+                scrapedInfo: {
+                  title: recipe.title.replace(/ by .*$/, ''), // " by 作者名" を除去
+                  image: recipe.image,
+                  tsukurepo: recipe.reposu_n?.toString() || '0',
+                  author: recipe.author || '',
+                  recipeid: recipe.id_n.toString(),
+                  ingredients: recipe.ingredients || [], // DBから取得した材料情報を使用
+                },
+                llmOutput: {
+                  isMain: recipe.ismain === 1,
+                  isSub: recipe.issub === 1,
+                  tags: recipe.tags,
+                },
+              });
+            }
             setIsMainChecked(recipe.ismain === 1);
             setIsSubChecked(recipe.issub === 1);
 
@@ -187,17 +213,22 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams,
 
   const handleReloadRecipe = () => {
     startReloadingTransition(async () => {
-      const scrapedInfo = await reScrapeRecipe(recipeNumber);
-      if (scrapedInfo) {
-        setRecipeDetails(prevDetails => {
-          if (prevDetails) {
-            return { ...prevDetails, scrapedInfo };
-          }
-          return null;
-        });
-        alert('レシピ情報を再読み込みしました。');
-      } else {
-        alert('レシピ情報の再読み込みに失敗しました。');
+      try {
+        const scrapedInfo = await reScrapeRecipe(recipeNumber);
+        if (scrapedInfo) {
+          setRecipeDetails(prevDetails => {
+            if (prevDetails) {
+              return { ...prevDetails, scrapedInfo };
+            }
+            return null;
+          });
+          alert('レシピ情報を再読み込みしました。');
+        } else {
+          alert('レシピ情報の再読み込みに失敗しました。レシピが存在しないか、アクセスできません。');
+        }
+      } catch (error) {
+        console.error('Failed to reload recipe:', error);
+        alert('レシピ情報の再読み込みに失敗しました。レシピが存在しないか、アクセスできません。');
       }
     });
   };
@@ -230,6 +261,7 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams,
           isMain: isMainChecked ? 1 : 0,
           isSub: isSubChecked ? 1 : 0,
           tags: allSelectedTags.map(tag => tag.name),
+          ingredients: scrapedInfo.ingredients || [], // 追加: 材料情報
         });
         /*
         alert('レシピが追加されました！');
@@ -308,6 +340,7 @@ export default function RecipeForm({ recipeId, isEditMode = false, searchParams,
           isMain: isMainChecked ? 1 : 0,
           isSub: isSubChecked ? 1 : 0,
           tags: allSelectedTags.map(tag => tag.name),
+          ingredients: scrapedInfo.ingredients || [], // 追加: 材料情報
         });
         if (isEditMode && searchParams) {
           let finalParams;
