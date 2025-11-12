@@ -49,5 +49,8 @@ next-env.d.ts
 # serena
 .serena/
 
+# 実データ
+lenochan_inserts.sql
+
 # ワークファイル
 ZZZ.md

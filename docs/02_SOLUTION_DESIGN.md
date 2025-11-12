@@ -90,18 +90,15 @@
      - `recipe_id` (INTEGER, FK → reno_recipes)
      - `rank` (INTEGER): 評価状態（0: いいねなし, 1: 好き, 2: まあまあ, 9: 好きじゃない）
      - `comment` (TEXT): ユーザーコメント
-     - `created_at` (TIMESTAMP)
-     - `updated_at` (TIMESTAMP)
 
 2. **reno_user_folders** (ユーザーフォルダー)
    - つくおめの現行フォルダー設計を継続使用
    - 主キー: `folder_id` (UUID)
    - カラム:
-     - `folder_id` (UUID)
      - `user_id` (UUID, FK → reno_users)
+     - `folder_id` (UUID)
      - `folder_name` (VARCHAR(255))
-     - `created_at` (TIMESTAMP)
-     - `updated_at` (TIMESTAMP)
+     - `id_of_recipes` (VARCHAR(2000)): フォルダーに含まれるレシピID（スペース区切り文字列）
 
 3. **reno_users** (ユーザー)
    - レノちゃん専用のユーザーテーブル
@@ -111,8 +108,6 @@
      - `email_verified` (BOOLEAN)
      - `name` (VARCHAR(255))
      - `google_id` (VARCHAR(255), UNIQUE, NULLABLE)
-     - `created_at` (TIMESTAMP)
-     - `updated_at` (TIMESTAMP)
 
 #### 3.2.3 つくおめ（現行設計の維持）
 
@@ -135,28 +130,39 @@
 ```sql
 CREATE TABLE reno_recipes (
     recipe_id INTEGER PRIMARY KEY,
-    cookpad_recipe_id INTEGER UNIQUE NOT NULL,
     title VARCHAR(2000) NOT NULL,
     image_url VARCHAR(2000),
     tsukurepo_count INTEGER DEFAULT 0,
-    author_name VARCHAR(255),
     is_main_dish BOOLEAN DEFAULT FALSE,
     is_sub_dish BOOLEAN DEFAULT FALSE,
-    tag VARCHAR(2000), -- タグ（スペース区切り文字列、つくおめの現行設計に準拠）
-    scraped_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    tag VARCHAR(2000) -- タグ（スペース区切り文字列、つくおめの現行設計に準拠）
 );
 
-CREATE INDEX idx_reno_recipes_cookpad_id ON reno_recipes(cookpad_recipe_id);
-CREATE INDEX idx_reno_recipes_author ON reno_recipes(author_name);
 CREATE INDEX idx_reno_recipes_tsukurepo ON reno_recipes(tsukurepo_count DESC);
 ```
+
+**注意**: `recipe_id`はクックパッドのレシピID（`repo.id_n`）をそのまま使用します。`cookpad_recipe_id`カラムは不要のため削除しました。
 
 **注意**: `recipe_ingredients`テーブルはレノちゃん側では不要です。材料情報はつくおめ側（管理機能）でのみ使用されます。
 
 ##### reno_tag_master テーブル
+```sql
+CREATE TABLE reno_tag_master (
+    tag_id INTEGER PRIMARY KEY,
+    level INTEGER,
+    dispname VARCHAR(2000),
+    name VARCHAR(2000),
+    l VARCHAR(255) DEFAULT '',
+    m VARCHAR(255) DEFAULT '',
+    s VARCHAR(255) DEFAULT '',
+    ss VARCHAR(255) DEFAULT ''
+);
 
-**注意**: つくおめの現行タグマスタ設計を継続使用します。詳細なスキーマはつくおめの現行設計に準拠します。
+CREATE INDEX idx_reno_tag_master_level ON reno_tag_master(level);
+CREATE INDEX idx_reno_tag_master_name ON reno_tag_master(name);
+```
+
+**注意**: つくおめの現行タグテーブル（`tag`テーブル）の設計を継続使用しますが、レノちゃん側では`userid`を削除して全ユーザー共通のマスタとして管理します。
 
 **注意**: レシピとタグの関連は、`reno_recipes.tag`カラムにスペース区切りで格納します（つくおめの現行設計に準拠）。`reno_recipe_tags`テーブルは使用しません。
 
@@ -169,8 +175,6 @@ CREATE TABLE reno_user_recipe_preferences (
     recipe_id INTEGER NOT NULL,
     rank INTEGER DEFAULT 0 CHECK (rank IN (0, 1, 2, 9)),
     comment TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (user_id, recipe_id),
     FOREIGN KEY (user_id) REFERENCES reno_users(user_id) ON DELETE CASCADE,
     FOREIGN KEY (recipe_id) REFERENCES reno_recipes(recipe_id) ON DELETE CASCADE
@@ -182,6 +186,18 @@ CREATE INDEX idx_reno_user_recipe_prefs_rank ON reno_user_recipe_preferences(use
 ```
 
 ##### reno_user_folders テーブル
+```sql
+CREATE TABLE reno_user_folders (
+    user_id UUID NOT NULL,
+    folder_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    folder_name VARCHAR(255) NOT NULL,
+    id_of_recipes VARCHAR(2000),
+    FOREIGN KEY (user_id) REFERENCES reno_users(user_id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_reno_user_folders_user ON reno_user_folders(user_id);
+CREATE UNIQUE INDEX idx_reno_user_folders_user_name ON reno_user_folders(user_id, folder_name);
+```
 
 **注意**: つくおめの現行フォルダー設計を継続使用します。詳細なスキーマはつくおめの現行設計に準拠します。
 
@@ -194,9 +210,7 @@ CREATE TABLE reno_users (
     email_verified BOOLEAN DEFAULT FALSE,
     name VARCHAR(255),
     google_id VARCHAR(255) UNIQUE,
-    image_url VARCHAR(2000),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    image_url VARCHAR(2000)
 );
 
 CREATE INDEX idx_reno_users_email ON reno_users(email);
@@ -215,8 +229,6 @@ model User {
   name          String?
   googleId      String?   @unique @map("google_id")
   image         String?   @map("image_url")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
 
   @@map("reno_users") // データベース上のテーブル名を "reno_users" にマッピング
 }
@@ -289,30 +301,79 @@ model User {
 
 3. **連携対象データ**
    - `reno_recipes` テーブル: レシピ基本情報（`tag`カラムを含む）
-   - `reno_tag_master` テーブル: タグマスタ（つくおめの現行タグマスタをそのまま連携）
+   - `reno_tag_master` テーブル: タグマスタ（つくおめの`tag`テーブルから連携）
 
 **注意**: 材料情報（ingredients）はレノちゃん側では不要のため、データ連携の対象外です。
 
-4. **スクリプト実装例**
+4. **データマッピング詳細**
+
+**repo → reno_recipes のマッピング:**
+- `repo.id_n` → `reno_recipes.recipe_id` (主キー、クックパッドのレシピIDをそのまま使用)
+- `repo.title` → `reno_recipes.title` (そのまま、作者名も含む)
+- `repo.image` → `reno_recipes.image_url`
+- `repo.reposu_n` → `reno_recipes.tsukurepo_count`
+- `repo.ismain` → `reno_recipes.is_main_dish` (1 → TRUE, 0/9 → FALSE)
+- `repo.issub` → `reno_recipes.is_sub_dish` (1 → TRUE, 0 → FALSE)
+- `repo.tag` → `reno_recipes.tag` (そのまま)
+
+**tag → reno_tag_master のマッピング:**
+- `tag.id` → `reno_tag_master.tag_id` (主キー)
+- `tag.level` → `reno_tag_master.level`
+- `tag.dispname` → `reno_tag_master.dispname`
+- `tag.name` → `reno_tag_master.name`
+- `tag.l` → `reno_tag_master.l`
+- `tag.m` → `reno_tag_master.m`
+- `tag.s` → `reno_tag_master.s`
+- `tag.ss` → `reno_tag_master.ss`
+- **注意**: `tag.userid`は削除（全ユーザー共通マスタとして統合）
+
+5. **ユーザーIDの扱い**
+- つくおめの`repo`テーブルは`userid`が主キーの一部ですが、レノちゃん側では全ユーザー共通データとして扱います
+- 連携時は**'sysop'ユーザーのデータのみを連携**します
+- 重複する`recipe_id`（`repo.id_n`）がある場合は、全件移行時にUPSERT形式で上書きします
+
+6. **スクリプト実装詳細**
+
+**スクリプトの機能:**
+- つくおめのデータベースからデータを抽出（毎回全件移行、'sysop'ユーザーのみ）
+- レノちゃん用のINSERT文を生成（UPSERT形式: ON CONFLICT DO UPDATE）
+- SQLファイルとして出力（1INSERT文1行形式）
+- 重複チェック（`recipe_id`の主キー制約を利用）
+
+**実装例:**
 
 ```typescript
 // つくおめ側: データ連携スクリプト
 async function generateInsertStatements() {
-  // 1. レシピデータの抽出とINSERT文生成
-  const recipes = await db.query('SELECT * FROM repo');
-  const recipeInserts = recipes.map(r => 
-    `INSERT INTO reno_recipes (recipe_id, cookpad_recipe_id, title, ...) VALUES (...);`
+  const userId = 'sysop';
+  
+  // 1. レシピデータの抽出とINSERT文生成（毎回全件移行）
+  const recipes = await db.query(
+    'SELECT DISTINCT ON (id_n) * FROM repo WHERE userid = $1 ORDER BY id_n',
+    [userId]
   );
   
-  // 2. タグマスタの抽出とINSERT文生成（つくおめの現行タグマスタをそのまま連携）
-  const tags = await getTagMaster();
+  const recipeInserts = recipes.map(r => {
+    return `INSERT INTO reno_recipes (recipe_id, title, image_url, tsukurepo_count, is_main_dish, is_sub_dish, tag) VALUES (${r.id_n}, ${escapeSQL(r.title || '')}, ${escapeSQL(r.image || '')}, ${r.reposu_n || 0}, ${r.ismain === 1}, ${r.issub === 1}, ${escapeSQL(r.tag || '')}) ON CONFLICT (recipe_id) DO UPDATE SET title = EXCLUDED.title, image_url = EXCLUDED.image_url, tsukurepo_count = EXCLUDED.tsukurepo_count, is_main_dish = EXCLUDED.is_main_dish, is_sub_dish = EXCLUDED.is_sub_dish, tag = EXCLUDED.tag;`;
+  });
+  
+  // 2. タグマスタの抽出とINSERT文生成（tagテーブルから）
+  const tags = await db.query(
+    'SELECT * FROM tag WHERE userid = $1 ORDER BY id',
+    [userId]
+  );
+  
   const tagInserts = tags.map(t =>
-    `INSERT INTO reno_tag_master (...) VALUES (...);`
+    `INSERT INTO reno_tag_master (tag_id, level, dispname, name, l, m, s, ss) VALUES (${t.id}, ${t.level !== null ? t.level : 'NULL'}, ${escapeSQL(t.dispname || '')}, ${escapeSQL(t.name || '')}, ${escapeSQL(t.l || '')}, ${escapeSQL(t.m || '')}, ${escapeSQL(t.s || '')}, ${escapeSQL(t.ss || '')}) ON CONFLICT (tag_id) DO UPDATE SET level = EXCLUDED.level, dispname = EXCLUDED.dispname, name = EXCLUDED.name, l = EXCLUDED.l, m = EXCLUDED.m, s = EXCLUDED.s, ss = EXCLUDED.ss;`
   );
   
-  // 3. SQLファイルに出力
+  // 3. SQLファイルに出力（1INSERT文1行形式）
   const sqlContent = [
+    '-- レノちゃん用データ連携SQL',
+    '-- 生成日時: ' + new Date().toISOString(),
+    '',
     ...recipeInserts,
+    '',
     ...tagInserts
   ].join('\n');
   
@@ -322,8 +383,10 @@ async function generateInsertStatements() {
 
 **注意事項**:
 - データの整合性チェックが必要（重複データの回避など）
-- 差分更新の仕組みを検討（全件再生成 vs 差分のみ）
+- UPSERT形式（ON CONFLICT DO UPDATE）を使用して重複を回避
 - エラーハンドリングとログ出力
+- SQLインジェクション対策（`escapeSQL`関数を使用）
+- INSERT文は1行形式で出力（可読性よりもファイルサイズを優先）
 
 ---
 
