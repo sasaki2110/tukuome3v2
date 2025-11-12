@@ -65,6 +65,7 @@ function processRepoRows(rows: RawRepo[]): Repo[] {
   return rows.map(row => ({
     ...row,
     tags: row.tag ? row.tag.split(' ') : [],
+    ingredients: row.ingredients ?? undefined, // nullをundefinedに変換
   }));
 }
 

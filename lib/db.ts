@@ -37,16 +37,21 @@ function getUntaggedWhereClause(tagMode: string): string {
 }
 
 function processRepoRows(rows: RawRepo[]): Repo[] {
-  return rows.map(row => ({
-    ...row,
-    tags: row.tag ? row.tag.split(' ') : [],
-    // 材料情報をJSONB型から配列にパース
-    ingredients: row.ingredients 
-      ? (typeof row.ingredients === 'string' 
-          ? JSON.parse(row.ingredients) 
-          : row.ingredients)
-      : undefined,
-  }));
+  return rows.map(row => {
+    // 材料情報をJSONB型から配列にパースし、nullをundefinedに変換
+    let ingredients: string[] | undefined = undefined;
+    if (row.ingredients) {
+      ingredients = typeof row.ingredients === 'string' 
+        ? JSON.parse(row.ingredients) 
+        : row.ingredients;
+    }
+    
+    return {
+      ...row,
+      tags: row.tag ? row.tag.split(' ') : [],
+      ingredients,
+    };
+  });
 }
 
 /**
