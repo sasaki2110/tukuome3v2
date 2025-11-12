@@ -48,3 +48,6 @@ next-env.d.ts
 
 # serena
 .serena/
+
+# ワークファイル
+ZZZ.md

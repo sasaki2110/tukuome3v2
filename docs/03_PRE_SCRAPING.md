@@ -539,101 +539,9 @@ const query = `
 
 ---
 
-### 3.6 既存レシピへの材料情報追加（バッチ処理）
+### 3.6 材料情報の追加・更新（バッチ処理）
 
 #### 3.6.1 バッチ処理スクリプトの作成
-
-`scripts/batchUpdateIngredients.ts` を作成：
-
-```typescript
-import { sql } from '@vercel/postgres';
-import { scrapeUrl } from '@/lib/scraper';
-
-/**
- * 既存レシピの材料情報を一括更新するバッチ処理（全ユーザー対象）
- * @param limit 処理するレシピの最大件数（デフォルト: 100）
- * @param offset スキップするレシピの件数（デフォルト: 0）
- */
-async function batchUpdateIngredients(
-  limit: number = 100,
-  offset: number = 0
-): Promise<void> {
-  // 材料情報が未設定のレシピを取得（全ユーザー対象）
-  const { rows } = await sql`
-    SELECT userid, id_n, title
-    FROM repo
-    WHERE ingredients IS NULL OR ingredients = '[]'::jsonb
-    ORDER BY id_n
-    LIMIT ${limit}
-    OFFSET ${offset}
-  `;
-
-  console.log(`処理対象: ${rows.length} 件`);
-
-  for (const row of rows) {
-    const recipeId = row.id_n;
-    const userId = row.userid;
-    console.log(`処理中: ${recipeId} - ${row.title} (user: ${userId})`);
-
-    try {
-      // スクレイピングで材料情報を取得
-      const url = `https://cookpad.com/jp/recipes/${recipeId}`;
-      const scrapeResult = await scrapeUrl(url);
-      
-      if (scrapeResult && scrapeResult.recipeInfo.ingredients) {
-        const ingredientsJson = JSON.stringify(scrapeResult.recipeInfo.ingredients);
-        
-        // 材料情報を更新（全ユーザー対象）
-        await sql`
-          UPDATE repo
-          SET ingredients = ${ingredientsJson}::jsonb
-          WHERE userid = ${userId} AND id_n = ${recipeId}
-        `;
-        
-        console.log(`  ✓ 更新完了: ${scrapeResult.recipeInfo.ingredients.length} 件の材料`);
-      } else {
-        console.log(`  ✗ 材料情報が取得できませんでした`);
-      }
-
-      // レート制限対策: 1秒待機
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    } catch (error) {
-      console.error(`  ✗ エラー: ${error}`);
-      // エラーが発生しても処理を続行
-    }
-  }
-
-  console.log('バッチ処理完了');
-}
-
-// 実行例
-async function main() {
-  const limit = parseInt(process.env.LIMIT || '100', 10);
-  const offset = parseInt(process.env.OFFSET || '0', 10);
-
-  await batchUpdateIngredients(limit, offset);
-}
-
-if (require.main === module) {
-  main().catch(console.error);
-}
-```
-
-#### 3.6.2 実行方法
-
-```bash
-# 環境変数を設定して実行（全ユーザー対象）
-LIMIT=100 OFFSET=0 npm run tsx scripts/batchUpdateIngredients.ts
-
-# または、package.jsonにスクリプトを追加
-npm run batch-update-ingredients
-```
-
----
-
-### 3.7 定期的な材料情報更新（バッチ処理）
-
-#### 3.7.1 更新スクリプトの作成
 
 `scripts/batchRefreshIngredients.ts` を作成：
 
@@ -642,7 +550,9 @@ import { sql } from '@vercel/postgres';
 import { scrapeUrl } from '@/lib/scraper';
 
 /**
- * 既存レシピの材料情報とつくれぽ数を定期的に更新するバッチ処理（全ユーザー対象）
+ * 既存レシピの材料情報とつくれぽ数を追加・更新するバッチ処理（全ユーザー対象）
+ * - 材料情報が未設定のレシピに材料情報を追加
+ * - 既存の材料情報とつくれぽ数を最新情報に更新
  * @param limit 処理するレシピの最大件数（デフォルト: 100）
  * @param offset スキップするレシピの件数（デフォルト: 0）
  */
@@ -650,9 +560,9 @@ async function batchRefreshIngredients(
   limit: number = 100,
   offset: number = 0
 ): Promise<void> {
-  // 材料情報が未設定または空のレシピを取得（全ユーザー対象）
+  // 材料情報が未設定または空のレシピを取得（全ユーザー対象、重複排除）
   const { rows } = await sql`
-    SELECT userid, id_n, title, reposu_n
+    SELECT distinct id_n, title, reposu_n
     FROM repo
     WHERE ingredients IS NULL OR ingredients = '[]'::jsonb
     ORDER BY id_n
@@ -664,8 +574,7 @@ async function batchRefreshIngredients(
 
   for (const row of rows) {
     const recipeId = row.id_n;
-    const userId = row.userid;
-    console.log(`処理中: ${recipeId} - ${row.title} (user: ${userId})`);
+    console.log(`処理中: ${recipeId} - ${row.title}`);
 
     try {
       // スクレイピングで最新情報を取得
@@ -678,13 +587,13 @@ async function batchRefreshIngredients(
           ? JSON.stringify(ingredients)
           : null;
         
-        // 材料情報とつくれぽ数を更新（全ユーザー対象）
+        // 材料情報とつくれぽ数を更新（全ユーザー対象、同じid_nのレシピを一括更新）
         await sql`
           UPDATE repo
           SET 
             ingredients = COALESCE(${ingredientsJson}::jsonb, ingredients),
             reposu_n = ${parseInt(tsukurepo, 10) || row.reposu_n}
-          WHERE userid = ${userId} AND id_n = ${recipeId}
+          WHERE id_n = ${recipeId}
         `;
         
         console.log(`  ✓ 更新完了: 材料 ${ingredients?.length || 0} 件, つくれぽ数 ${tsukurepo}`);
@@ -716,7 +625,17 @@ if (require.main === module) {
 }
 ```
 
-#### 3.7.2 定期実行の設定
+#### 3.6.2 実行方法
+
+```bash
+# 環境変数を設定して実行（全ユーザー対象）
+LIMIT=100 OFFSET=0 npm run tsx scripts/batchRefreshIngredients.ts
+
+# または、package.jsonにスクリプトを追加
+npm run batch-refresh-ingredients
+```
+
+#### 3.6.3 定期実行の設定
 
 cron等で定期実行する場合：
 
@@ -783,26 +702,21 @@ cron等で定期実行する場合：
    - レシピ変更時にスクレイピングが実行されないことを確認（フラグが `false` の場合）
    - フラグを `true` に変更して、レシピ変更時にスクレイピングが実行されることを確認
 
-### 4.5 フェーズ5: 既存レシピへの材料情報追加
+### 4.5 フェーズ5: 材料情報の追加・更新（バッチ処理）
 
 1. **バッチ処理スクリプトの作成**
-   - `scripts/batchUpdateIngredients.ts` を作成
+   - `scripts/batchRefreshIngredients.ts` を作成
 
 2. **テスト実行**
    ```bash
-   LIMIT=10 OFFSET=0 npm run tsx scripts/batchUpdateIngredients.ts
+   LIMIT=10 OFFSET=0 npm run tsx scripts/batchRefreshIngredients.ts
    ```
 
 3. **本番実行**
    - 小規模から開始し、段階的に処理件数を増やす
 
-### 4.6 フェーズ6: 定期更新スクリプトの作成
-
-1. **バッチ処理スクリプトの作成**
-   - `scripts/batchRefreshIngredients.ts` を作成
-
-2. **定期実行の設定**
-   - cron等で定期実行を設定（オプション）
+4. **定期実行の設定（オプション）**
+   - cron等で定期実行を設定
 
 ---
 
@@ -832,7 +746,8 @@ cron等で定期実行する場合：
    - フラグが `true` の場合、レシピ変更時にスクレイピングが実行されること
 
 3. **バッチ処理のテスト**
-   - 既存レシピへの材料情報追加が正常に動作すること
+   - 材料情報の追加・更新が正常に動作すること
+   - つくれぽ数の更新が正常に動作すること
    - エラーハンドリングが適切に動作すること
 
 ### 5.3 動作確認項目
@@ -840,9 +755,9 @@ cron等で定期実行する場合：
 - [ ] レシピ追加時に材料情報がDBに保存される
 - [ ] レシピ更新時に材料情報がDBに更新される
 - [ ] レシピ取得時に材料情報が正しく読み込まれる
-- [ ] 既存レシピへの材料情報追加が正常に動作する
+- [ ] バッチ処理で材料情報の追加・更新が正常に動作する
+- [ ] バッチ処理でつくれぽ数の更新が正常に動作する
 - [ ] 材料情報が空の場合でもエラーが発生しない
-- [ ] バッチ処理が正常に動作する
 - [ ] レシピ変更時のスクレイピング制御フラグが正常に動作する（`false` の場合）
 - [ ] レシピ変更時のスクレイピング制御フラグが正常に動作する（`true` の場合）
 
