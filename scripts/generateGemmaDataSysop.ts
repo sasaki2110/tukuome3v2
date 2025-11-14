@@ -18,7 +18,6 @@ if (fs.existsSync(envPath)) {
   });
 }
 
-import { scrapeUrl, RecipeInfo } from '@/lib/scraper';
 import { Tag, Repo, RawRepo } from '@/app/model/model';
 import { sql } from '@vercel/postgres';
 
@@ -225,17 +224,17 @@ async function generateGemmaTrainingData() {
 
     console.log(`レシピ ${repo.id_n}: ${repo.title} を処理中`);
 
-    // レシピ本文のスクレイピング
-    let recipeBodyText = '';
-    try {
-      const scrapeResult = await scrapeUrl(`https://cookpad.com/jp/recipes/${repo.id_n}`);
-      const title = scrapeResult.recipeInfo.title;
-      const ingredients = scrapeResult.recipeInfo.ingredients?.join(' ') || '';
-      recipeBodyText = `(title)${title} (ingredientText)${ingredients}`;
-    } catch (error) {
-      console.error(`レシピ ${repo.id_n} のスクレイピングに失敗しました:`, error);
-      continue; // スクレイピング失敗時はスキップ
+    // repoテーブルから材料情報を取得
+    const title = repo.title || '';
+    const ingredients = repo.ingredients?.join(' ') || '';
+    
+    // 材料情報が存在しない場合はスキップ
+    if (!repo.ingredients || repo.ingredients.length === 0) {
+      console.log(`レシピ ${repo.id_n} は材料情報がないためスキップします。`);
+      continue;
     }
+    
+    const recipeBodyText = `(title)${title} (ingredientText)${ingredients}`;
 
     // レシピ分類の決定
     let recipeClassification: string;
