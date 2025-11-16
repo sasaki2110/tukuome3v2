@@ -7,6 +7,7 @@ import { Star, Heart, MessageSquare } from 'lucide-react'; // Star, Heart, Messa
 import LikeDialog from './LikeDialog'; // LikeDialogをインポート
 import Link from 'next/link'; // 追加
 import { useSearchParams } from 'next/navigation';
+import { recordRecipeViewAction } from '@/lib/services';
 
 
 type RecipeCardProps = {
@@ -58,6 +59,14 @@ const RecipeCard = ({ recipe, onRankChange, onCommentSubmit, onFolderClick }: Re
     return `/recipes/edit?${params.toString()}`;
   };
 
+  // クックパッドリンククリック時に閲覧履歴を記録
+  const handleRecipeView = async (recipeId: number) => {
+    // 非同期で閲覧履歴を記録（エラーは無視してユーザー体験を阻害しない）
+    recordRecipeViewAction(recipeId).catch((error) => {
+      console.error('Failed to record recipe view:', error);
+    });
+  };
+
   return (
     <div className="border rounded-lg overflow-hidden shadow-lg flex flex-col h-full">
       {/* 画像とタイトルはaタグで囲み、詳細ページへのリンクとする */}
@@ -66,6 +75,7 @@ const RecipeCard = ({ recipe, onRankChange, onCommentSubmit, onFolderClick }: Re
         target="_blank"
         rel="noopener noreferrer"
         className="flex flex-col flex-grow"
+        onClick={() => handleRecipeView(recipe.id_n)}
       >
         <div className="relative w-full h-40">
           <Image

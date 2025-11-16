@@ -1,6 +1,6 @@
 'use server';
 
-import { getRepos, getReposByTitle, getReposByTag, getRepoById, updateLikeStatus, updateComment, getAuthers, getDispTagsOptimized, getReposByFolder, getTagsByNamePattern, insertRecipe, deleteRecipe as deleteRecipeDb, updateRecipe as updateRecipeDb, deleteAllTags, insertTags, getMasterTags, updateMasterTags } from './db';
+import { getRepos, getReposByTitle, getReposByTag, getRepoById, updateLikeStatus, updateComment, getAuthers, getDispTagsOptimized, getReposByFolder, getTagsByNamePattern, insertRecipe, deleteRecipe as deleteRecipeDb, updateRecipe as updateRecipeDb, deleteAllTags, insertTags, getMasterTags, updateMasterTags, recordRecipeView, getRecentlyViewedRecipesWithDetails } from './db';
 import { Repo, Auther, DispTag, Tag, MasterTag } from '@/app/model/model';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -433,4 +433,30 @@ export async function updateMasterTagsInDb(masterTagText: string): Promise<void>
   // tagテーブルの更新
   await deleteAllTags(userId);
   await insertTags(userId, tagsForTagTable);
+}
+
+// 最近見たレシピ関連のサーバーアクション
+
+/**
+ * レシピの閲覧履歴を記録します（サーバーアクション）。
+ * @param recipeId レシピID
+ */
+export async function recordRecipeViewAction(recipeId: number): Promise<void> {
+  const userId = await getUserIdFromSession();
+  await recordRecipeView(userId, recipeId);
+}
+
+/**
+ * 最近見たレシピの詳細情報を取得します（サーバーアクション）。
+ * @param offset オフセット
+ * @param limit 取得件数
+ * @returns Repo型の配列とhasMoreフラグ
+ */
+export async function getRecentlyViewedRecipes(
+  offset: number,
+  limit: number
+): Promise<{ recipes: Repo[], hasMore: boolean }> {
+  const userId = await getUserIdFromSession();
+  const { repos, hasMore } = await getRecentlyViewedRecipesWithDetails(userId, limit, offset);
+  return { recipes: repos, hasMore };
 }

@@ -37,6 +37,7 @@ export default function NavBar() {
                 <Link href="/recipes/tags" className="block px-2 py-2 text-center">タグ検索</Link>
                 <Link href="/recipes/folders" className="block px-2 py-2 text-center">フォルダ</Link>
                 <Link href="/recipes/Authers" className="block px-2 py-2 text-center">作者一覧</Link>
+                <Link href="/recipes/recent" className="block px-2 py-2 text-center">最近見た</Link>
                 <Link href="/recipes/tags/maintenance" className="block px-2 py-2 text-center">タグメンテ</Link>
                 <li>
                   <button onClick={() => signOut()} className="block px-2 py-2 text-center">ログアウト</button>
@@ -56,6 +57,7 @@ export default function NavBar() {
             <Link href="/recipes/tags" onClick={()=> {setIsOpen(!isOpen)}} className="block px-2 py-2 text-center">タグ検索</Link>
             <Link href="/recipes/folders" onClick={()=> {setIsOpen(!isOpen)}} className="block px-2 py-2 text-center">フォルダ</Link>
             <Link href="/recipes/Authers" onClick={()=> {setIsOpen(!isOpen)}} className="block px-2 py-2 text-center">作者一覧</Link>
+            <Link href="/recipes/recent" onClick={()=> {setIsOpen(!isOpen)}} className="block px-2 py-2 text-center">最近見た</Link>
             <li>
               <button onClick={() => signOut()} className="block px-2 py-2 text-center">ログアウト</button>
             </li>

@@ -660,3 +660,72 @@ export async function getFoldersWithImages(userId: string): Promise<(Folder & { 
   `;
   return rows as (Folder & { images: string[] })[];
 }
+
+// 最近見たレシピ関連のDB操作
+
+/**
+ * レシピの閲覧履歴を記録します。
+ * 1ユーザーの最大履歴保持数は50件で、それを超えた場合は古い履歴を削除します。
+ * @param userId ユーザーID
+ * @param recipeId レシピID
+ */
+export async function recordRecipeView(userId: string, recipeId: number): Promise<void> {
+  // 1. 新しい閲覧履歴を挿入
+  await sql`
+    INSERT INTO recently_viewed (userid, recipe_id, viewed_at)
+    VALUES (${userId}, ${recipeId}, CURRENT_TIMESTAMP);
+  `;
+
+  // 2. 50件を超えている場合、古い履歴を削除（最新50件を保持）
+  // ウィンドウ関数を使用して効率的に削除
+  await sql`
+    DELETE FROM recently_viewed
+    WHERE userid = ${userId}
+      AND (userid, recipe_id, viewed_at) IN (
+        SELECT userid, recipe_id, viewed_at
+        FROM (
+          SELECT 
+            userid, 
+            recipe_id, 
+            viewed_at,
+            ROW_NUMBER() OVER (PARTITION BY userid ORDER BY viewed_at DESC) as rn
+          FROM recently_viewed
+          WHERE userid = ${userId}
+        ) ranked
+        WHERE rn > 50
+      );
+  `;
+}
+
+/**
+ * ユーザーが最近閲覧したレシピの詳細情報を取得します（repoテーブルとJOIN）。
+ * @param userId ユーザーID
+ * @param limit 取得件数
+ * @param offset スキップする件数
+ * @returns Repo型の配列とhasMoreフラグ
+ */
+export async function getRecentlyViewedRecipesWithDetails(
+  userId: string,
+  limit: number,
+  offset: number
+): Promise<{ repos: Repo[], hasMore: boolean }> {
+  const query = `
+    SELECT
+      r.*,
+      EXISTS (
+        SELECT 1
+        FROM folder
+        WHERE userid = $1 AND ' ' || idofrepos || ' ' LIKE '%' || r.id_n || '%'
+      ) as foldered
+    FROM recently_viewed rv
+    INNER JOIN repo r ON r.userid = rv.userid AND r.id_n = rv.recipe_id
+    WHERE rv.userid = $1
+    ORDER BY rv.viewed_at DESC
+    LIMIT $2 OFFSET $3;
+  `;
+  const { rows } = await sql.query(query, [userId, limit, offset]);
+
+  const hasMore = rows.length === limit;
+
+  return { repos: processRepoRows(rows as RawRepo[]), hasMore };
+}

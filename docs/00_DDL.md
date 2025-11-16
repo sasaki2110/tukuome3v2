@@ -112,6 +112,31 @@ CREATE UNIQUE INDEX mastertag_pkey ON mastertag USING BTREE (userid, gen, id);
 
 ---
 
+### 5. recently_viewed (最近見たレシピテーブル)
+
+```sql
+CREATE TABLE recently_viewed (
+    userid VARCHAR(2000) NOT NULL,
+    recipe_id INTEGER NOT NULL,
+    viewed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT recently_viewed_pkey PRIMARY KEY (userid, recipe_id, viewed_at)
+);
+
+CREATE INDEX idx_recently_viewed_userid_viewed_at 
+    ON recently_viewed(userid, viewed_at DESC);
+```
+
+**説明:**
+- ユーザーが最近閲覧したレシピの履歴を格納するテーブル
+- 主キー: (userid, recipe_id, viewed_at)
+- `userid`: ユーザーID
+- `recipe_id`: レシピID（クックパッドのレシピID、`repo.id_n`と対応）
+- `viewed_at`: 閲覧日時（デフォルト値: 現在時刻）
+- 同じレシピを複数回閲覧した場合、それぞれの閲覧履歴が記録される
+- インデックス: `(userid, viewed_at DESC)` でユーザーごとの最新閲覧順の取得を高速化
+
+---
+
 ## 注意事項
 
 1. **NOT NULL制約**: Vercelのダッシュボードでは明確に表示されていないため、主キーのカラムはNOT NULLとしていますが、実際のデータベースで確認してください
@@ -122,6 +147,7 @@ CREATE UNIQUE INDEX mastertag_pkey ON mastertag USING BTREE (userid, gen, id);
 
 ## 更新履歴
 
+- 2024-XX-XX: `recently_viewed`テーブルを追加（最近見たレシピ機能用）
 - 2024-XX-XX: `repo`テーブルに`ingredients`カラム（JSONB型）を追加
 - 2024-XX-XX: Vercelダッシュボードから取得した実際の定義に更新
 - 2024-XX-XX: 初版作成
