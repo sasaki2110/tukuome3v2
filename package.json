@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "batch-refresh-ingredients": "tsx scripts/batchRefreshIngredients.ts",
-    "generate-lenochan-inserts": "tsx scripts/generateLenochanInserts.ts"
+    "generate-lenochan-inserts": "tsx scripts/generateLenochanInserts.ts",
+    "generate-lenochan-inserts-sysop": "tsx scripts/generateLenochanInserts_sysop.ts"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.11",
