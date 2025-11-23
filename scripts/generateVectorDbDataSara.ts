@@ -261,10 +261,16 @@ async function generateVectorDbData() {
     // URLの生成
     const url = `https://cookpad.com/jp/recipes/${repo.id_n}`;
 
+    // タイトルから「by 作者名」を除去
+    const rawTitle = repo.title || '';
+    const title = rawTitle.includes(' by ') 
+      ? rawTitle.split(' by ')[0].trim() 
+      : rawTitle.trim();
+
     // ベクトルDB用の新フォーマットに変換
     const vectorDbRecipe: VectorDbRecipe = {
       id: String(repo.id_n),
-      title: repo.title || '',
+      title: title,
       category: category,
       category_detail: categoryDetail,
       ingredients: repo.ingredients, // 調味料除外はベクトルDB作成時に行う
