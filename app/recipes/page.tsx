@@ -1,7 +1,9 @@
-import { getFilteredRecipes } from "@/lib/services";
+import { getFilteredRecipes, getTagByName, getTagNameByHierarchy, getDispTags } from "@/lib/services";
 import { ITEMS_PER_PAGE } from "@/lib/constants";
 import { RecipeListWithLoadMore } from "../components/RecipeListWithLoadMore";
 import RecipeFilterControls from "../components/RecipeFilterControls";
+import Breadcrumb from "../components/Breadcrumb";
+import { DispTag } from "@/app/model/model";
 
 interface RecipesPageProps {
   searchParams: Promise<{
@@ -40,10 +42,72 @@ const RecipesPage = async ({ searchParams }: RecipesPageProps) => {
     tagMode // tagModeを渡す
   );
 
+  // パンくずリスト用のタグ情報を取得（タグが指定されている場合のみ）
+  const pathTags: DispTag[] = [];
+  
+  if (searchTag) {
+    const tagInfo = await getTagByName(searchTag);
+    if (tagInfo) {
+      const path: string[] = [];
+      
+      // レベル0（大タグ）のnameを取得
+      if (tagInfo.l) {
+        const lName = await getTagNameByHierarchy(0, tagInfo.l);
+        if (lName) {
+          path.push(lName);
+        }
+      }
+      
+      // レベル1（中タグ）のnameを取得
+      if (tagInfo.level >= 1 && tagInfo.m) {
+        const mName = await getTagNameByHierarchy(1, tagInfo.l, tagInfo.m);
+        if (mName) {
+          path.push(mName);
+        }
+      }
+      
+      // レベル2（小タグ）のnameを取得
+      if (tagInfo.level >= 2 && tagInfo.s) {
+        const sName = await getTagNameByHierarchy(2, tagInfo.l, tagInfo.m, tagInfo.s);
+        if (sName) {
+          path.push(sName);
+        }
+      }
+      
+      // レベル3（極小タグ）のnameを取得
+      if (tagInfo.level >= 3 && tagInfo.ss) {
+        const ssName = await getTagNameByHierarchy(3, tagInfo.l, tagInfo.m, tagInfo.s, tagInfo.ss);
+        if (ssName) {
+          path.push(ssName);
+        }
+      }
+      
+      // クリックしたタグ自体をパスに追加（既にパスに含まれている場合は追加しない）
+      if (path.length === 0 || path[path.length - 1] !== searchTag) {
+        path.push(searchTag);
+      }
+      
+      // 各階層のタグ情報を取得
+      for (let i = 0; i < path.length; i++) {
+        const level = i;
+        const parentTagName = i > 0 ? path[i - 1] : "";
+        const levelTags = await getDispTags(level, parentTagName);
+        const tag = levelTags.find((t) => t.name === path[i]);
+        if (tag) {
+          pathTags.push(tag);
+        }
+      }
+    }
+  }
+
   return (
     <>
       <RecipeFilterControls />
       <div className="p-4 pt-[100px]">
+        {/* パンくずリスト（タグが指定されている場合のみ表示） */}
+        {pathTags.length > 0 && (
+          <Breadcrumb pathTags={pathTags} />
+        )}
         <RecipeListWithLoadMore
           key={`${searchTerm}-${searchMode}-${searchTag}-${searchRank}-${searchSort}-${tagMode}`} // keyにtagModeを追加
           initialRecipes={initialRecipes}

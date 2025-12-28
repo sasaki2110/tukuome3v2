@@ -1,6 +1,6 @@
 'use server';
 
-import { getRepos, getReposByTitle, getReposByTag, getRepoById, updateLikeStatus, updateComment, getAuthers, getDispTagsOptimized, getReposByFolder, getTagsByNamePattern, insertRecipe, deleteRecipe as deleteRecipeDb, updateRecipe as updateRecipeDb, deleteAllTags, insertTags, getMasterTags, updateMasterTags, recordRecipeView, getRecentlyViewedRecipesWithDetails } from './db';
+import { getRepos, getReposByTitle, getReposByTag, getRepoById, updateLikeStatus, updateComment, getAuthers, getDispTagsOptimized, getReposByFolder, getTagsByNamePattern, insertRecipe, deleteRecipe as deleteRecipeDb, updateRecipe as updateRecipeDb, deleteAllTags, insertTags, getMasterTags, updateMasterTags, recordRecipeView, getRecentlyViewedRecipesWithDetails, getTagByName as getTagByNameDb, getTagNameByHierarchy as getTagNameByHierarchyDb } from './db';
 import { Repo, Auther, DispTag, Tag, MasterTag } from '@/app/model/model';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -171,6 +171,36 @@ export async function getTagsByName(pattern: string): Promise<Tag[]> {
 export async function getDispTags(level: number, value: string): Promise<DispTag[]> {
   const userId = await getUserIdFromSession();
   return await getDispTagsOptimized(userId, level, value);
+}
+
+/**
+ * タグ名からタグ情報を取得します。
+ * @param tagName タグ名
+ * @returns タグ情報（存在しない場合はnull）
+ */
+export async function getTagByName(tagName: string): Promise<{ l: string; m: string; s: string; ss: string; level: number } | null> {
+  const userId = await getUserIdFromSession();
+  return await getTagByNameDb(userId, tagName);
+}
+
+/**
+ * 階層値からタグのnameを取得します。
+ * @param level タグのレベル
+ * @param l 大タグの値
+ * @param m 中タグの値（level >= 1の場合）
+ * @param s 小タグの値（level >= 2の場合）
+ * @param ss 極小タグの値（level >= 3の場合）
+ * @returns タグのname（存在しない場合はnull）
+ */
+export async function getTagNameByHierarchy(
+  level: number,
+  l: string,
+  m: string = "",
+  s: string = "",
+  ss: string = ""
+): Promise<string | null> {
+  const userId = await getUserIdFromSession();
+  return await getTagNameByHierarchyDb(userId, level, l, m, s, ss);
 }
 
 /**

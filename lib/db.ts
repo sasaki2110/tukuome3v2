@@ -385,6 +385,72 @@ export async function getTagsByNamePattern(userId: string, pattern: string): Pro
 }
 
 /**
+ * タグ名からタグ情報を取得します。
+ * @param userId ユーザーID
+ * @param tagName タグ名
+ * @returns タグ情報（存在しない場合はnull）
+ */
+export async function getTagByName(userId: string, tagName: string): Promise<{ l: string; m: string; s: string; ss: string; level: number } | null> {
+  const { rows } = await sql`
+    SELECT l, m, s, ss, level
+    FROM tag
+    WHERE userid = ${userId} AND name = ${tagName}
+    LIMIT 1
+  `;
+  
+  if (rows.length === 0) {
+    return null;
+  }
+  
+  return {
+    l: rows[0].l || "",
+    m: rows[0].m || "",
+    s: rows[0].s || "",
+    ss: rows[0].ss || "",
+    level: rows[0].level || 0,
+  };
+}
+
+/**
+ * 階層値からタグのnameを取得します。
+ * @param userId ユーザーID
+ * @param level タグのレベル
+ * @param l 大タグの値
+ * @param m 中タグの値（level >= 1の場合）
+ * @param s 小タグの値（level >= 2の場合）
+ * @param ss 極小タグの値（level >= 3の場合）
+ * @returns タグのname（存在しない場合はnull）
+ */
+export async function getTagNameByHierarchy(
+  userId: string,
+  level: number,
+  l: string,
+  m: string = "",
+  s: string = "",
+  ss: string = ""
+): Promise<string | null> {
+  let query: string;
+  let params: (string | number)[];
+
+  if (level === 0) {
+    query = `SELECT name FROM tag WHERE userid = $1 AND level = 0 AND l = $2 LIMIT 1`;
+    params = [userId, l];
+  } else if (level === 1) {
+    query = `SELECT name FROM tag WHERE userid = $1 AND level = 1 AND l = $2 AND m = $3 LIMIT 1`;
+    params = [userId, l, m];
+  } else if (level === 2) {
+    query = `SELECT name FROM tag WHERE userid = $1 AND level = 2 AND l = $2 AND m = $3 AND s = $4 LIMIT 1`;
+    params = [userId, l, m, s];
+  } else {
+    query = `SELECT name FROM tag WHERE userid = $1 AND level = 3 AND l = $2 AND m = $3 AND s = $4 AND ss = $5 LIMIT 1`;
+    params = [userId, l, m, s, ss];
+  }
+
+  const { rows } = await sql.query(query, params);
+  return rows.length > 0 ? rows[0].name : null;
+}
+
+/**
  * レシピをデータベースに挿入します。
  * @param userId ユーザーID
  * @param recipeData 挿入するレシピデータ
